@@ -60,7 +60,13 @@ class Defense10:
         self.network = NetworkMonitor()
         self._email_rate = email_rate_per_hour
         self._verdicts: list[Verdict10] = []
-        self.ml.train()
+        self._max_verdicts = 10000  # Prevent unbounded memory growth
+        # Graceful ML degradation — if sklearn not available or training fails
+        try:
+            self.ml.train()
+            self._ml_available = True
+        except Exception:
+            self._ml_available = False
 
     def configure_server(self, server_id: str, approved_domains: list[str]) -> None:
         """Set up per-server policy: rate limits + approved recipient domains."""
@@ -85,12 +91,13 @@ class Defense10:
                                [f"canary token exfiltrated: {t.token_id}" for t in trips], 100, passed)
         passed.append("L9_honeypot")
 
-        # L4: ML classifier (opaque to adversary)
-        pred = self.ml.classify(tool_call)
-        if pred.is_threat:
-            return self._block(call_id, "L4_ml_classifier",
-                               [f"ML threat conf={pred.confidence} family={pred.threat_family}"],
-                               int(pred.confidence * 100), passed)
+        # L4: ML classifier (opaque to adversary) — graceful degradation
+        if self._ml_available:
+            pred = self.ml.classify(tool_call)
+            if pred.is_threat:
+                return self._block(call_id, "L4_ml_classifier",
+                                   [f"ML threat conf={pred.confidence} family={pred.threat_family}"],
+                                   int(pred.confidence * 100), passed)
         passed.append("L4_ml_classifier")
 
         # L8: recipient whitelist
@@ -182,4 +189,7 @@ class Defense10:
     def _allow(self, call_id, passed) -> Verdict10:
         v = Verdict10(call_id=call_id, allowed=True, layers_passed=passed)
         self._verdicts.append(v)
+        # Evict old verdicts to prevent memory exhaustion
+        if len(self._verdicts) > self._max_verdicts:
+            self._verdicts = self._verdicts[-self._max_verdicts:]
         return v

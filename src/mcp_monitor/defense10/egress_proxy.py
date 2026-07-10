@@ -41,12 +41,18 @@ _EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
 
 class IntentRegistry:
     """Records the recipients each MCP tool call authorized, keyed by a
-    correlation id, so we can later compare against the actual egress call."""
+    correlation id, so we can later compare against the actual egress call.
 
-    def __init__(self) -> None:
+    TTL: Intent records expire after max_age_seconds to prevent unbounded memory.
+    """
+
+    def __init__(self, *, max_age_seconds: float = 300.0, max_entries: int = 10000) -> None:
         self._intents: dict[str, dict[str, Any]] = {}
+        self._max_age = max_age_seconds
+        self._max_entries = max_entries
 
     def record(self, correlation_id: str, tool_call: dict[str, Any]) -> None:
+        self._evict_stale()
         args = tool_call.get("arguments", {})
         recipients = self._extract_authorized_recipients(args)
         self._intents[correlation_id] = {
@@ -56,7 +62,24 @@ class IntentRegistry:
         }
 
     def get(self, correlation_id: str) -> dict[str, Any] | None:
-        return self._intents.get(correlation_id)
+        record = self._intents.get(correlation_id)
+        if record and (time.time() - record["ts"]) > self._max_age:
+            del self._intents[correlation_id]
+            return None
+        return record
+
+    def _evict_stale(self) -> None:
+        """Remove expired entries and enforce max size."""
+        now = time.time()
+        if len(self._intents) > self._max_entries:
+            # Remove oldest entries
+            sorted_keys = sorted(self._intents.keys(), key=lambda k: self._intents[k]["ts"])
+            for k in sorted_keys[:len(sorted_keys) // 2]:
+                del self._intents[k]
+        # Remove expired
+        expired = [k for k, v in self._intents.items() if now - v["ts"] > self._max_age]
+        for k in expired:
+            del self._intents[k]
 
     @staticmethod
     def _extract_authorized_recipients(args: dict[str, Any]) -> set[str]:

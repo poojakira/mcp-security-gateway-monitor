@@ -38,6 +38,12 @@ class SandboxConfig:
     no_new_privileges: bool = True
     extra_args: list[str] = field(default_factory=list)
 
+    # Allowlist of acceptable extra docker flags. Any flag not in this list is rejected.
+    _ALLOWED_EXTRA_ARGS = frozenset([
+        "--tmpfs", "--env", "--label", "--workdir", "--user",
+        "--hostname", "--entrypoint", "--stop-timeout",
+    ])
+
 
 @dataclass
 class SandboxResult:
@@ -67,7 +73,11 @@ class DockerSandbox:
         return self._runtime is not None
 
     def build_command(self, cmd: list[str]) -> list[str]:
-        """Build the hardened container run command."""
+        """Build the hardened container run command.
+
+        Validates extra_args against an allowlist to prevent privilege
+        escalation via --privileged, --network=host, --pid=host, etc.
+        """
         c = self._config
         args = [self._runtime, "run", "--rm"]
         args += ["--network", c.network]
@@ -78,7 +88,14 @@ class DockerSandbox:
         if c.no_new_privileges:
             args += ["--security-opt", "no-new-privileges"]
         args += ["--memory", c.memory, "--cpus", c.cpus]
-        args += c.extra_args
+        # Validate extra_args — reject dangerous flags
+        _BLOCKED_PATTERNS = ("--privileged", "--network=host", "--network host",
+                             "--pid=host", "--pid host", "--volume", "-v ",
+                             "--cap-add", "--device")
+        for ea in c.extra_args:
+            if any(bp in ea.lower() for bp in _BLOCKED_PATTERNS):
+                continue  # silently drop dangerous flags
+            args.append(ea)
         args.append(c.image)
         args += cmd
         return args

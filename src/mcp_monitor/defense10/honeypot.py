@@ -47,18 +47,27 @@ class HoneypotVault:
 
     def mint(self, token_type: str = "generic", label: str = "") -> str:
         """Create a canary token. Plant the return value where an attacker
-        would find it (env var, config, fake DB row)."""
+        would find it (env var, config, fake DB row).
+
+        Formats are designed to be INDISTINGUISHABLE from real secrets
+        (no 'CANARY' substring — that would tip off the attacker).
+        """
         rand = secrets.token_hex(16)
         if token_type == "aws_key":
+            # Real AWS key format: AKIA + 16 uppercase alphanumeric
             value = f"AKIA{secrets.token_hex(8).upper()[:16]}"
         elif token_type == "api_key":
-            value = f"sk_live_CANARY_{rand}"
+            # Looks like a real Stripe key (no CANARY marker)
+            value = f"sk_live_{secrets.token_hex(16)}"
         elif token_type == "password":
-            value = f"Canary!{rand[:12]}"
+            # Looks like a generated password
+            value = f"{secrets.token_urlsafe(16)}"
         elif token_type == "email":
-            value = f"canary-{rand[:8]}@honeytrap.internal"
+            # Looks like a real internal address
+            names = ["admin", "ops", "security", "billing", "noreply"]
+            value = f"{secrets.choice(names)}-{rand[:4]}@internal.company.io"
         else:
-            value = f"CANARY_{rand}"
+            value = secrets.token_hex(20)
 
         token_id = hashlib.sha256(value.encode()).hexdigest()[:16]
         self._tokens[value] = {

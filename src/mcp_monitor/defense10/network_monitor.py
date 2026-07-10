@@ -147,11 +147,23 @@ class NetworkMonitor:
 
     @staticmethod
     def _is_local(addr: str) -> bool:
-        return (
-            addr.startswith("127.") or addr.startswith("10.")
-            or addr.startswith("192.168.") or addr.startswith("172.")
-            or addr == "0.0.0.0" or addr.startswith("ipv6:")
-        )
+        if addr.startswith("127.") or addr.startswith("10."):
+            return True
+        if addr.startswith("192.168."):
+            return True
+        # RFC 1918: 172.16.0.0/12 = 172.16.x.x through 172.31.x.x only
+        if addr.startswith("172."):
+            parts = addr.split(".")
+            if len(parts) >= 2:
+                try:
+                    second = int(parts[1])
+                    if 16 <= second <= 31:
+                        return True
+                except ValueError:
+                    pass
+        if addr in ("0.0.0.0", "::") or addr.startswith("ipv6:"):
+            return True
+        return False
 
 
 # ---------------------------------------------------------------------------
