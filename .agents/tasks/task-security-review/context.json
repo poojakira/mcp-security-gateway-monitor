@@ -1,0 +1,31 @@
+{
+  "project_type": "Python MCP security monitoring system with ML classification, sandbox isolation, DPI proxy, honeypots, and audit logging",
+  "language": "Python",
+  "build_system": "pyproject.toml (setuptools)",
+  "test_framework": "pytest",
+  "build_command": "pip install -e . && python -c 'import mcp_monitor'",
+  "test_command": "pytest tests/",
+  "verification_instructions": "Run pytest tests/ to validate code, run python -c 'from mcp_monitor.defense10 import orchestrator10' to verify imports",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "pip install -e .",
+  "environment_constraints": "INTEGRATIONS_ONLY network - cannot install packages from PyPI",
+  "contribution_requirements": "Security-focused code review",
+  "key_patterns": "Dataclass-based result objects, regex-based detection, scikit-learn ML pipeline, Docker subprocess isolation, hash-chained audit log",
+  "relevant_files": [
+    "src/mcp_monitor/defense10/ml_classifier.py",
+    "src/mcp_monitor/defense10/features.py",
+    "src/mcp_monitor/defense10/dataset.py",
+    "src/mcp_monitor/defense10/egress_proxy.py",
+    "src/mcp_monitor/defense10/network_monitor.py",
+    "src/mcp_monitor/defense10/honeypot.py",
+    "src/mcp_monitor/defense10/sandbox.py",
+    "src/mcp_monitor/defense10/orchestrator10.py",
+    "src/mcp_monitor/defense10/rate_limiter.py",
+    "src/mcp_monitor/detectors/prompt_injection.py",
+    "src/mcp_monitor/detectors/exfiltration.py",
+    "src/mcp_monitor/audit/log.py",
+    "src/mcp_monitor/audit/wal.py",
+    "src/mcp_monitor/redteam/payloads.py"
+  ],
+  "directory_structure": "src/mcp_monitor/ contains defense10/ (core ML+sandbox+DPI), detectors/ (regex-based), audit/ (hash chain + WAL), redteam/ (attack catalog)"
+}

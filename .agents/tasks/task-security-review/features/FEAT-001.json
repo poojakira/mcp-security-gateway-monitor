@@ -1,0 +1,33 @@
+{
+  "id": "FEAT-001",
+  "type": "docs",
+  "description": "Line-by-line ML security team code review of all 14 source files",
+  "status": "completed",
+  "steps": [
+    "Review ml_classifier.py for pickle deserialization risks, model poisoning, adversarial evasion",
+    "Review features.py for regex bypasses and feature extraction weaknesses",
+    "Review dataset.py for training data poisoning vectors",
+    "Review egress_proxy.py for bypass conditions and TOCTOU issues",
+    "Review network_monitor.py for /proc parsing vulnerabilities and eBPF issues",
+    "Review honeypot.py for canary detection evasion",
+    "Review sandbox.py for command injection and container escape",
+    "Review orchestrator10.py for layer ordering bugs and fail-open conditions",
+    "Review rate_limiter.py for race conditions and bypass",
+    "Review prompt_injection.py for regex evasion patterns",
+    "Review exfiltration.py for detection gaps",
+    "Review audit/log.py for hash chain correctness and file race conditions",
+    "Review audit/wal.py for crash recovery correctness and path traversal",
+    "Review redteam/payloads.py for weaponization risks",
+    "Write structured PASS/FAIL/CONCERN verdict per file with line numbers"
+  ],
+  "acceptance_criteria": [
+    "Every file reviewed with specific line-number references",
+    "Security vulnerabilities categorized by severity",
+    "Overall submission readiness verdict provided"
+  ],
+  "verification": [
+    "Review document is complete and covers all 14 files"
+  ],
+  "blocked_reason": null,
+  "findings": "2 CRITICAL (pickle RCE), 5 HIGH, 7 MEDIUM findings. Conditional pass for submission."
+}

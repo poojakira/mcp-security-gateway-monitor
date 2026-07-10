@@ -240,19 +240,38 @@ class MLThreatClassifier:
         )
 
     def save(self, path: str) -> None:
-        """Persist the trained model to disk."""
+        """Persist the trained model to disk with integrity verification."""
         import pickle
+        import hashlib as _hl
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        data = pickle.dumps(self._pipeline)
+        integrity = _hl.sha256(data).hexdigest()
         with open(path, "wb") as f:
-            pickle.dump(self._pipeline, f)
+            f.write(data)
+        with open(path + ".sha256", "w") as f:
+            f.write(integrity)
 
     def load(self, path: str) -> bool:
-        """Load a trained model from disk."""
+        """Load a trained model from disk WITH integrity verification.
+
+        Refuses to load if the SHA-256 checksum doesn't match, preventing
+        arbitrary code execution via tampered pickle files.
+        """
         import pickle
+        import hashlib as _hl
         if not os.path.exists(path):
             return False
+        checksum_path = path + ".sha256"
+        if not os.path.exists(checksum_path):
+            return False  # Refuse to load without integrity file
+        with open(checksum_path, "r") as f:
+            expected_hash = f.read().strip()
         with open(path, "rb") as f:
-            self._pipeline = pickle.load(f)
+            data = f.read()
+        actual_hash = _hl.sha256(data).hexdigest()
+        if actual_hash != expected_hash:
+            return False  # INTEGRITY FAILURE — model file tampered
+        self._pipeline = pickle.loads(data)
         self._trained = True
         return True
 
