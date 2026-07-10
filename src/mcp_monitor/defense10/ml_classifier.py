@@ -150,30 +150,42 @@ class MLThreatClassifier:
         benign: list[str] | None = None,
     ) -> dict[str, Any]:
         """Train the classifier. Returns training metrics."""
-        from sklearn.pipeline import Pipeline
+        from sklearn.pipeline import Pipeline, FeatureUnion
         from sklearn.feature_extraction.text import TfidfVectorizer
-        from sklearn.ensemble import RandomForestClassifier
+        from sklearn.ensemble import GradientBoostingClassifier
+        from sklearn.linear_model import LogisticRegression
         from sklearn.model_selection import cross_val_score
         import numpy as np
+        from mcp_monitor.defense10.features import StructuralFeatures
 
-        mal = malicious if malicious is not None else _MALICIOUS_SAMPLES
-        ben = benign if benign is not None else (_BENIGN_SAMPLES + _BENIGN_SAMPLES_EXT)
+        if malicious is not None:
+            mal = malicious
+        else:
+            # Large generated dataset + curated seed samples
+            from mcp_monitor.defense10.dataset import generate
+            gen_mal, gen_ben = generate(n_per_family=60)
+            mal = _MALICIOUS_SAMPLES + gen_mal
+            self._gen_ben = gen_ben
+        if benign is not None:
+            ben = benign
+        else:
+            ben = _BENIGN_SAMPLES + _BENIGN_SAMPLES_EXT + getattr(self, "_gen_ben", [])
 
         X = mal + ben
         y = [1] * len(mal) + [0] * len(ben)
 
+        # Hybrid features: char n-grams (catch obfuscation) UNION structural
+        # behavioral features (generalize to unseen attack structures).
         self._pipeline = Pipeline([
-            ("tfidf", TfidfVectorizer(
-                analyzer="char_wb",
-                ngram_range=(2, 5),
-                lowercase=True,
-                min_df=1,
-            )),
-            ("clf", RandomForestClassifier(
-                n_estimators=200,
-                max_depth=None,
-                random_state=42,
-                class_weight="balanced",
+            ("features", FeatureUnion([
+                ("ngram", TfidfVectorizer(
+                    analyzer="char_wb", ngram_range=(2, 4),
+                    lowercase=True, min_df=2, max_features=3000,
+                )),
+                ("structural", StructuralFeatures()),
+            ])),
+            ("clf", LogisticRegression(
+                max_iter=2000, C=1.0, class_weight="balanced", random_state=42,
             )),
         ])
         self._pipeline.fit(X, y)
@@ -194,7 +206,10 @@ class MLThreatClassifier:
             "n_malicious": len(mal),
             "n_benign": len(ben),
             "cv_accuracy": round(cv_mean, 4),
-            "n_features": len(self._pipeline.named_steps["tfidf"].vocabulary_),
+            "n_features": len(
+                self._pipeline.named_steps["features"]
+                .transformer_list[0][1].vocabulary_
+            ) + len(StructuralFeatures.FEATURE_NAMES),
         }
 
     def classify(self, tool_call: dict[str, Any]) -> MLPrediction:

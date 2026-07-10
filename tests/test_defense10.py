@@ -183,3 +183,46 @@ class TestDefense10:
         s = d.stats()
         assert s["total"] >= 1
         assert s["blocked"] >= 1
+
+
+
+# --- Accuracy requirement: 90%+ on large dataset (locked-in regression) ---
+class TestMLAccuracy:
+    def test_large_dataset_cv_accuracy_above_90(self):
+        """The classifier must achieve >=90% cross-val accuracy on the large
+        generated dataset (1000+ samples)."""
+        clf = MLThreatClassifier()
+        metrics = clf.train()
+        assert metrics["n_malicious"] + metrics["n_benign"] >= 1000
+        assert metrics["cv_accuracy"] >= 0.90, f"CV accuracy {metrics['cv_accuracy']} < 0.90"
+
+    def test_held_out_accuracy_above_90(self):
+        """Fresh data with a different seed (unseen combinations) must score >=90%."""
+        import json
+        from mcp_monitor.defense10 import dataset
+        clf = MLThreatClassifier()
+        clf.train()
+        tm, tb = dataset.generate(n_per_family=25, seed=1234)
+        correct = 0
+        total = len(tm) + len(tb)
+        for s in tm:
+            if clf.classify({"arguments": json.loads(s)}).is_threat:
+                correct += 1
+        for s in tb:
+            if not clf.classify({"arguments": json.loads(s)}).is_threat:
+                correct += 1
+        assert correct / total >= 0.90, f"held-out accuracy {correct/total:.3f} < 0.90"
+
+    def test_zero_false_positives_on_benign(self):
+        """No benign business email should be flagged (usability requirement)."""
+        clf = MLThreatClassifier()
+        clf.train()
+        benign = [
+            {"to": "colleague@company.com", "body": "lunch?"},
+            {"to": "boss@company.com", "subject": "Report", "body": "attached"},
+            {"to": "team@company.com", "subject": "Standup", "body": "10am"},
+            {"sql": "SELECT id FROM products WHERE active = true"},
+            {"message": "Can you help draft the release notes?"},
+        ]
+        fps = sum(1 for b in benign if clf.classify({"arguments": b}).is_threat)
+        assert fps == 0, f"{fps} false positives on benign traffic"
