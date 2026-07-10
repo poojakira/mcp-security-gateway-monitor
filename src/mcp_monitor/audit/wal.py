@@ -55,7 +55,10 @@ class WriteAheadLog:
             wal_f.flush()
             os.fsync(wal_f.fileno())
 
-        os.unlink(tmp_path)
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass  # On Windows, file may still be locked; cleanup on next write
         self._entries_written += 1
 
     def recover(self) -> list[AuditEntry]:
