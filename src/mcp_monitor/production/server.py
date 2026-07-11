@@ -71,6 +71,11 @@ class ProductionServer:
             failure_threshold=self.config.circuit_breaker_threshold,
             recovery_timeout=self.config.circuit_breaker_timeout,
         )
+        self._output_circuit_breaker = CircuitBreaker(
+            name="inspect_output",
+            failure_threshold=self.config.circuit_breaker_threshold,
+            recovery_timeout=self.config.circuit_breaker_timeout,
+        )
         self._shutdown = GracefulShutdown(
             drain_timeout=30.0,
             on_shutdown=self._flush_wal,
@@ -183,13 +188,19 @@ class ProductionServer:
                 )
                 return
 
-            # Rate limiting
-            if not self._rate_limiter.allow():
-                self._metrics.inc_error()
-                await self._send_response(
-                    writer, 429, {"error": "Rate limit exceeded"}
-                )
-                return
+            # Determine if this is an operational endpoint that should
+            # bypass rate limiting (health probes, readiness checks,
+            # metrics scrapes). These must remain available even under
+            # load to prevent Kubernetes from marking pods as unready.
+            _RATE_LIMIT_EXEMPT_PATHS = {"/v1/health", "/v1/ready", "/v1/metrics"}
+            if path not in _RATE_LIMIT_EXEMPT_PATHS:
+                # Rate limiting (only for non-operational endpoints)
+                if not self._rate_limiter.allow():
+                    self._metrics.inc_error()
+                    await self._send_response(
+                        writer, 429, {"error": "Rate limit exceeded"}
+                    )
+                    return
 
             # Route request
             self._shutdown.request_started()
@@ -318,6 +329,9 @@ class ProductionServer:
         self._metrics.set_circuit_state(
             "inspect_call", self._circuit_breaker.state.value
         )
+        self._metrics.set_circuit_state(
+            "inspect_output", self._output_circuit_breaker.state.value
+        )
         return 200, self._metrics.expose()
 
     def _handle_inspect_call(
@@ -382,8 +396,19 @@ class ProductionServer:
         tool_name = payload.get("tool_name", "")
         output = payload.get("output", {})
 
+        # Use circuit breaker for graceful degradation
         try:
-            result = self._monitor.inspect_output(tool_name, output)
+            result = self._output_circuit_breaker.call(
+                self._monitor.inspect_output,
+                tool_name,
+                output,
+                fallback=lambda tn, out: {
+                    "allowed": True,
+                    "risk_score": 0,
+                    "findings": ["circuit_breaker_open"],
+                    "tool_name": tn,
+                },
+            )
         except Exception as exc:
             self._logger.error(f"inspect_output failed: {exc}")
             return 500, {"error": "Internal processing error"}

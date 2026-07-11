@@ -17,7 +17,10 @@ spec:
     spec:
       containers:
         - name: mcp-monitor
-          image: mcp-monitor:latest
+          # Set the image tag to a specific version for production deployments.
+          # Replace YOUR_REGISTRY with your container registry (e.g., ghcr.io/org).
+          image: mcp-monitor:${IMAGE_TAG:-latest}
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
               protocol: TCP
@@ -47,4 +50,11 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: mcp-monitor-data
       terminationGracePeriodSeconds: 30
