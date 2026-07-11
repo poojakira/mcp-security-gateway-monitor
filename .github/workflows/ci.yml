@@ -25,15 +25,16 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
+          pip install scikit-learn numpy
 
       - name: Run tests with coverage
         run: |
           python -m pytest tests/ -v --cov=mcp_monitor --cov-report=term-missing
 
-      - name: Verify 342 tests collected
+      - name: Verify 462 tests collected
         run: |
           count=$(python -m pytest tests/ --collect-only -q 2>/dev/null | tail -1 | grep -oP '\d+(?= tests)')
-          if [ "$count" != "342" ]; then
-            echo "Expected 342 tests, got $count"
+          if [ "$count" != "462" ]; then
+            echo "Expected 462 tests, got $count"
             exit 1
           fi
