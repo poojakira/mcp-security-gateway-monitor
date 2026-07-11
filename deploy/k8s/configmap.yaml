@@ -15,5 +15,7 @@ data:
   MCP_LOG_LEVEL: "INFO"
   MCP_ALLOWED_SERVERS: ""
   MCP_MAX_PAYLOAD_KB: "512"
-  MCP_WAL_PATH: "/tmp/mcp_monitor_wal.jsonl"
-  MCP_AUDIT_PATH: "/tmp/mcp_monitor_audit.jsonl"
+  # Paths use /data/ which is backed by a PersistentVolumeClaim
+  # to ensure audit data persists across pod restarts.
+  MCP_WAL_PATH: "/data/mcp_monitor_wal.jsonl"
+  MCP_AUDIT_PATH: "/data/mcp_monitor_audit.jsonl"

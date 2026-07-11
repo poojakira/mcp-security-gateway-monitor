@@ -7,6 +7,7 @@ OpenTelemetry collectors or ELK.
 
 from __future__ import annotations
 
+import collections
 import json
 import os
 import time
@@ -101,15 +102,26 @@ class Span:
 class Tracer:
     """Creates and manages traces with W3C traceparent support.
 
+    Uses a bounded deque to prevent unbounded memory growth under
+    sustained load. Once the maximum span count is reached, the oldest
+    spans are discarded automatically.
+
     Parameters
     ----------
     service_name:
         Service name attached to all spans.
+    max_spans:
+        Maximum number of spans to retain in memory. Older spans are
+        evicted when this limit is reached. Defaults to 10000.
     """
 
-    def __init__(self, service_name: str = "mcp-security-monitor") -> None:
+    def __init__(
+        self,
+        service_name: str = "mcp-security-monitor",
+        max_spans: int = 10000,
+    ) -> None:
         self.service_name = service_name
-        self._spans: List[Span] = []
+        self._spans: collections.deque = collections.deque(maxlen=max_spans)
 
     def start_trace(self) -> str:
         """Start a new trace and return the trace_id."""
