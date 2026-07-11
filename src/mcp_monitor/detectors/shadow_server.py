@@ -50,7 +50,15 @@ class ShadowServerDetector:
         if server_id is None:
             return (True, "tool_call missing server_id field")
 
-        if server_id not in self._allowed:
+        # An unhashable server_id (list/dict/etc.) can't be a legitimate
+        # server identifier; treat it as shadow instead of crashing on the
+        # set membership test.
+        try:
+            is_allowed = server_id in self._allowed
+        except TypeError:
+            return (True, "server_id is not a valid (hashable) identifier")
+
+        if not is_allowed:
             return (True, f"server '{server_id}' is not registered")
 
         # Track usage
@@ -58,7 +66,10 @@ class ShadowServerDetector:
             self._registry[server_id]["call_count"] += 1
 
         # Check capability mismatch
-        tool_name: str = tool_call.get("name", "")
+        tool_name = tool_call.get("name", "")
+        # Fail gracefully when the tool name is a non-string (or missing).
+        if not isinstance(tool_name, str):
+            tool_name = str(tool_name) if tool_name is not None else ""
         capability_prefix = tool_name.split(".")[0] if "." in tool_name else ""
         if (
             capability_prefix

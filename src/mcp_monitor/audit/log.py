@@ -31,9 +31,9 @@ class AuditEntry:
     def compute_hash(self) -> str:
         """Compute SHA-256 hash from prev_hash + timestamp + event_type + data."""
         content = (
-            self.prev_hash
+            str(self.prev_hash)
             + str(self.timestamp)
-            + self.event_type
+            + str(self.event_type)
             + str(self.data)
         )
         return hashlib.sha256(content.encode("utf-8")).hexdigest()
@@ -111,7 +111,39 @@ class AuditLog:
         """Append a single entry to the log file."""
         self._log_file.parent.mkdir(parents=True, exist_ok=True)
         with self._log_file.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(asdict(entry)) + "\n")
+            f.write(self._serialize_entry(entry) + "\n")
+
+    @staticmethod
+    def _serialize_entry(entry: AuditEntry) -> str:
+        """Serialize an entry to a JSON line, never crashing on malformed data.
+
+        Arbitrary tool-call data may contain non-JSON-serializable values
+        (bytes, sets, custom objects), non-string dict keys, or even circular
+        references. Since the audit path sits inline with every decision, a
+        serialization failure here would be a denial-of-service. We therefore
+        fall back to a repr of the offending payload rather than raising.
+
+        Note: ``dataclasses.asdict`` is intentionally avoided because it deep
+        copies recursively and would raise ``RecursionError`` on a cyclic
+        ``data`` payload before serialization even begins.
+        """
+        record: dict[str, Any] = {
+            "entry_id": entry.entry_id,
+            "timestamp": entry.timestamp,
+            "event_type": entry.event_type,
+            "data": entry.data,
+            "prev_hash": entry.prev_hash,
+            "entry_hash": entry.entry_hash,
+        }
+        try:
+            return json.dumps(record, default=str)
+        except (TypeError, ValueError, RecursionError):
+            try:
+                data_repr = repr(entry.data)
+            except Exception:
+                data_repr = "<unrepresentable audit data>"
+            record["data"] = {"_unserializable_repr": data_repr}
+            return json.dumps(record, default=str)
 
     def _load(self) -> None:
         """Load existing entries from the log file."""

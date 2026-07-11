@@ -43,6 +43,10 @@ class PIIDetector:
 
     def detect(self, text: str) -> dict[str, list[str]]:
         """Return mapping of PII type to list of found values in *text*."""
+        # Fail gracefully on malformed (non-string) input: a security tool in
+        # the request path must never crash on unexpected types.
+        if not isinstance(text, str):
+            return {}
         findings: dict[str, list[str]] = {}
         for pii_type, pattern in self.patterns.items():
             matches = pattern.findall(text)
@@ -52,9 +56,22 @@ class PIIDetector:
 
     def redact(self, text: str, replacement: str = "[REDACTED]") -> str:
         """Replace all detected PII in *text* with *replacement*."""
+        # Fail gracefully on non-string input; coerce so the return type
+        # contract (always ``str``) still holds.
+        if not isinstance(text, str):
+            text = str(text)
+        # Coerce a non-string replacement so the contract holds.
+        if not isinstance(replacement, str):
+            replacement = str(replacement)
+        # IMPORTANT: use a replacement *function* rather than a template
+        # string. ``re.sub`` interprets backslash escapes (\1, \g<name>, \A,
+        # ...) in a template replacement, so an arbitrary replacement value
+        # such as "\\A" or "\\1" would raise ``re.error`` and crash this
+        # detector -- a denial-of-service on the request path. A function
+        # replacement is always treated literally.
         result = text
         for pattern in self.patterns.values():
-            result = pattern.sub(replacement, result)
+            result = pattern.sub(lambda _m: replacement, result)
         return result
 
     def scan_tool_call(

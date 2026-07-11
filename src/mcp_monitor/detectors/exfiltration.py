@@ -56,6 +56,10 @@ class ExfiltrationDetector:
         """
         findings: list[str] = []
 
+        # Fail gracefully on a non-string tool name (malformed input).
+        if not isinstance(tool_name, str):
+            tool_name = str(tool_name) if tool_name is not None else ""
+
         # 1. Email BCC injection
         if self._is_email_tool(tool_name):
             if self.detect_bcc_injection(output):
@@ -101,6 +105,10 @@ class ExfiltrationDetector:
         - Hidden recipients in headers
         - BCC fields in nested structures
         """
+        # Fail gracefully when the payload is not a dict (malformed input).
+        if not isinstance(email_payload, dict):
+            return False
+
         # Direct BCC field
         bcc = email_payload.get("bcc")
         if bcc:
@@ -113,7 +121,11 @@ class ExfiltrationDetector:
         headers = email_payload.get("headers", {})
         if isinstance(headers, dict):
             for key, value in headers.items():
-                if key.lower() in ("bcc", "x-bcc", "blind-copy"):
+                if isinstance(key, str) and key.lower() in (
+                    "bcc",
+                    "x-bcc",
+                    "blind-copy",
+                ):
                     if value:
                         return True
 
