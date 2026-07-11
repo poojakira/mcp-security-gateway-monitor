@@ -163,7 +163,7 @@ class MLThreatClassifier:
         else:
             # Large generated dataset + curated seed samples
             from mcp_monitor.defense10.dataset import generate
-            gen_mal, gen_ben = generate(n_per_family=60)
+            gen_mal, gen_ben = generate(n_per_family=300)
             mal = _MALICIOUS_SAMPLES + gen_mal
             self._gen_ben = gen_ben
         if benign is not None:
