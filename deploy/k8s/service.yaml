@@ -1,0 +1,22 @@
+# TLS termination note:
+# This service exposes plaintext HTTP on port 80 internally.
+# TLS should be terminated at the ingress controller or via a service mesh
+# sidecar (e.g., Istio, Linkerd) rather than in the application itself.
+# For zero-trust environments, deploy with an mTLS-capable service mesh
+# to encrypt all in-cluster traffic between pods.
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-monitor
+  namespace: mcp-monitor
+  labels:
+    app.kubernetes.io/name: mcp-monitor
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: mcp-monitor

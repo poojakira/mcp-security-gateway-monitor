@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-monitor
+  namespace: mcp-monitor
+  labels:
+    app.kubernetes.io/name: mcp-monitor
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mcp-monitor
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: mcp-monitor
+    spec:
+      containers:
+        - name: mcp-monitor
+          # Replace with your registry/tag, e.g. ghcr.io/org/mcp-monitor:v1.0.0
+          image: mcp-monitor:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: mcp-monitor-config
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "250m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /v1/health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /v1/ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: wal-data
+              mountPath: /data
+      volumes:
+        # WAL is ephemeral per-pod scratch space. Audit data flows through
+        # structured JSON logs to stdout, collected by a log aggregator
+        # (e.g., Fluentd, Datadog Agent). No shared PVC needed.
+        - name: wal-data
+          emptyDir: {}
+      terminationGracePeriodSeconds: 30

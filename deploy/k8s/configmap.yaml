@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mcp-monitor-config
+  namespace: mcp-monitor
+  labels:
+    app.kubernetes.io/name: mcp-monitor
+data:
+  MCP_LISTEN_PORT: "8080"
+  MCP_SHADOW_MODE: "false"
+  MCP_WEBHOOK_URL: ""
+  MCP_RATE_LIMIT_RPM: "600"
+  MCP_CIRCUIT_BREAKER_THRESHOLD: "5"
+  MCP_CIRCUIT_BREAKER_TIMEOUT: "30"
+  MCP_LOG_LEVEL: "INFO"
+  MCP_ALLOWED_SERVERS: ""
+  MCP_MAX_PAYLOAD_KB: "512"
+  # WAL uses per-pod emptyDir (ephemeral scratch space for write-ahead log).
+  # Audit data flows through structured JSON logs to stdout and is collected
+  # by a cluster-level log aggregator (Fluentd, Datadog Agent, etc.).
+  MCP_WAL_PATH: "/data/mcp_monitor_wal.jsonl"
+  MCP_AUDIT_PATH: "/data/mcp_monitor_audit.jsonl"
