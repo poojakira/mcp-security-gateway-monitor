@@ -4,3 +4,7 @@ __pycache__/
 *.egg-info/
 .coverage
 *.pkl
+.hypothesis/
+.sbomenv/
+# Generated dashboard render (not source); produced at runtime.
+security_dashboard.html

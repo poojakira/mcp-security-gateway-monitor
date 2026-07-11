@@ -17,6 +17,7 @@ dev = [
     "scikit-learn>=1.3",
     "numpy>=1.24",
     "pyyaml>=6.0",
+    "hypothesis>=6",
 ]
 # The core detectors + 5 layers are pure stdlib (zero deps).
 # The defense10 ML classifier needs scikit-learn; install with [ml].
