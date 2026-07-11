@@ -1,0 +1,24 @@
+# pip-audit gate allow-list
+# ---------------------------------------------------------------------------
+# Format: one vulnerability ID (CVE or GHSA) per line. Blank lines and text
+# after '#' are ignored. An entry suppresses the *blocking* behaviour of
+# scripts/pip_audit_gate.py for that specific advisory only. Findings are
+# still printed in the audit output -- nothing is hidden.
+#
+# Every entry MUST document: what, why accepted, and a review date.
+# Only add HIGH/CRITICAL advisories here when the fix is genuinely un-installable
+# or the affected code path is not reachable in a supported install.
+# ---------------------------------------------------------------------------
+
+# --- mitmproxy transitive dependencies (optional `[dpi]` extra only) ---------
+# tornado and msgpack are pulled in ONLY by mitmproxy, which is the optional
+# `[dpi]` extra used for Layer 10 deep-packet inspection in production.
+# The zero-dependency core and the default / `[dev]` / `[ml]` installs are NOT
+# affected. mitmproxy 12.2.3 pins `msgpack<=1.1.2` and `tornado<=6.5.5`, so the
+# upstream fixes (msgpack 1.2.1, tornado 6.5.6/6.5.7) cannot be installed until
+# mitmproxy releases a compatible update. Tracked as accepted risk.
+# Review date: 2026-09-01 (re-check for a mitmproxy release that lifts the pins).
+
+GHSA-6v7p-g79w-8964   # msgpack 1.1.2 - DoS (SEGV) on Unpacker reuse after error; fix 1.2.1
+CVE-2026-49853        # tornado 6.5.5 - SimpleAsyncHTTPClient leaks auth on cross-origin redirect; fix 6.5.6
+CVE-2026-49855        # tornado 6.5.5 - unbounded gzip decompression memory DoS; fix 6.5.6

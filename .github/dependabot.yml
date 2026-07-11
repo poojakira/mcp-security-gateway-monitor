@@ -1,0 +1,38 @@
+version: 2
+updates:
+  # Python dependencies declared in pyproject.toml (dev / ml / dpi extras).
+  # The core has zero runtime dependencies, so most updates here concern the
+  # optional extras and dev tooling.
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "security"
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+      include: "scope"
+    groups:
+      # Batch low-risk patch/minor bumps to reduce PR noise.
+      python-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Keep GitHub Actions used by CI and the security workflow up to date.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"

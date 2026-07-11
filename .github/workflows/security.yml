@@ -1,0 +1,74 @@
+name: Security
+
+# Supply-chain security checks. Runs independently of the CI test job so it can
+# never break the existing test matrix in ci.yml.
+on:
+  push:
+  pull_request:
+  schedule:
+    # Weekly re-audit so newly-published advisories are caught even without a push.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-audit:
+    name: pip-audit (fail on HIGH/CRITICAL)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pip-audit
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-audit
+
+      # The zero-dependency core is the primary maintained surface. This gate
+      # must be clean with no allow-list assistance.
+      - name: Audit core install (zero runtime deps)
+        run: |
+          pip install -e .
+          python scripts/pip_audit_gate.py
+
+      # Full footprint including optional [dev]/[ml]/[dpi] extras. The severity
+      # gate fails on any non-allow-listed HIGH/CRITICAL advisory. Accepted,
+      # documented, upstream-pinned risks live in security/audit-allowlist.txt.
+      - name: Audit full install (core + dev + ml + dpi)
+        run: |
+          pip install -e ".[dev,ml,dpi]"
+          python scripts/pip_audit_gate.py
+
+  sbom:
+    name: Generate CycloneDX SBOM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build SBOM from full install
+        run: |
+          python -m pip install --upgrade pip
+          pip install cyclonedx-bom
+          python -m venv .sbomenv
+          ./.sbomenv/bin/pip install --upgrade pip
+          ./.sbomenv/bin/pip install -e ".[dev,ml,dpi]"
+          cyclonedx-py environment ./.sbomenv/bin/python \
+            --pyproject pyproject.toml --mc-type library \
+            --output-format JSON --output-reproducible -o sbom.ci.json
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cyclonedx-sbom
+          path: sbom.ci.json

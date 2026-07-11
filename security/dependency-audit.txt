@@ -1,0 +1,108 @@
+================================================================================
+ DEPENDENCY VULNERABILITY AUDIT
+ Project: mcp-security-gateway-monitor 0.1.0
+================================================================================
+
+Tooling
+-------
+  pip-audit     2.10.1   (advisory data: OSV.dev + PyPI/PyPA)
+  cyclonedx-py  7.3.0    (SBOM generator, see ../sbom.json)
+  Python        3.12.13
+  Audit scope   FULL install: project + [dev] + [ml] + [dpi] extras
+                (57 third-party packages; the widest possible footprint)
+
+How this was produced
+---------------------
+  pip install -e ".[dev,ml,dpi]"
+  pip freeze --exclude-editable > freeze.txt
+  pip-audit -r freeze.txt --no-deps
+
+  Severity is enriched from OSV.dev (CVSS v3.1) by scripts/pip_audit_gate.py,
+  which is also the CI gate (fails the build on non-allow-listed HIGH/CRITICAL).
+
+--------------------------------------------------------------------------------
+RAW pip-audit OUTPUT
+--------------------------------------------------------------------------------
+Name    Version ID                  Fix Versions
+------- ------- ------------------- ------------
+msgpack 1.1.2   GHSA-6v7p-g79w-8964 1.2.1
+tornado 6.5.5   CVE-2026-49854      6.5.6
+tornado 6.5.5   CVE-2026-49853      6.5.6
+tornado 6.5.5   CVE-2026-49855      6.5.6
+tornado 6.5.5   GHSA-pw6j-qg29-8w7f 6.5.7
+
+Result: 5 known vulnerabilities in 2 packages.
+
+--------------------------------------------------------------------------------
+SEVERITY-ENRICHED SUMMARY
+--------------------------------------------------------------------------------
+PACKAGE   VERSION  SEVERITY  ID                   FIX      FROM EXTRA
+--------  -------  --------  -------------------  -------  ----------
+msgpack   1.1.2    HIGH      GHSA-6v7p-g79w-8964  1.2.1    [dpi] (via mitmproxy)
+tornado   6.5.5    HIGH      CVE-2026-49853       6.5.6    [dpi] (via mitmproxy)
+tornado   6.5.5    HIGH      CVE-2026-49855       6.5.6    [dpi] (via mitmproxy)
+tornado   6.5.5    MODERATE  GHSA-pw6j-qg29-8w7f  6.5.7    [dpi] (via mitmproxy)
+tornado   6.5.5    LOW       CVE-2026-49854       6.5.6    [dpi] (via mitmproxy)
+
+Totals: 3 HIGH, 1 MODERATE, 1 LOW.
+
+--------------------------------------------------------------------------------
+HONEST ASSESSMENT
+--------------------------------------------------------------------------------
+* The zero-dependency CORE is CLEAN. The default install (`pip install -e .`)
+  and the `[dev]` and `[ml]` installs pull in NONE of the vulnerable packages.
+  A fresh core audit reports: "no known vulnerabilities found."
+
+* ALL 5 findings live in `tornado` and `msgpack`, which are transitive
+  dependencies of `mitmproxy`. mitmproxy is the OPTIONAL `[dpi]` extra used only
+  for Layer 10 deep-packet inspection in production deployments.
+
+* The fixes are currently UN-INSTALLABLE for this dependency tree: mitmproxy
+  12.2.3 pins `msgpack<=1.1.2` and `tornado<=6.5.5`, so pip cannot upgrade to
+  the patched msgpack 1.2.1 / tornado 6.5.6+ without a new mitmproxy release.
+  This is an upstream constraint, not a choice of this project.
+
+* Reachability: these advisories affect tornado's HTTP *client* redirect/proxy
+  credential handling, gzip decompression, and msgpack's streaming unpacker
+  reuse-after-error. The `[dpi]` egress proxy does not expose these code paths
+  to untrusted input in the documented configuration, which further lowers the
+  practical risk. They are nonetheless tracked, not dismissed.
+
+--------------------------------------------------------------------------------
+FINDING DETAILS
+--------------------------------------------------------------------------------
+[HIGH] msgpack 1.1.2 - GHSA-6v7p-g79w-8964  (fix: 1.2.1)
+  Reusing an Unpacker after an error can crash with a SEGV; unpacking untrusted
+  input repeatedly enables a denial-of-service. Workaround: create a new
+  Unpacker after any error instead of reusing one.
+
+[HIGH] tornado 6.5.5 - CVE-2026-49853 / GHSA-3x9g-8vmp-wqvf  (fix: 6.5.6)
+  SimpleAsyncHTTPClient does not strip Authorization / auth_* headers when a
+  3xx redirect changes origin (follow_redirects=True is the default), so
+  credentials can leak to an unintended host. Fixed in 6.5.6.
+
+[HIGH] tornado 6.5.5 - CVE-2026-49855 / GHSA-mgf9-4vpg-hj56  (fix: 6.5.6)
+  gzip decompression has no cumulative size limit; a malicious server can drive
+  effectively unbounded memory use via SimpleAsyncHTTPClient. HTTPServer is
+  affected only if decompress_request=True. Fixed in 6.5.6.
+
+[MODERATE] tornado 6.5.5 - GHSA-pw6j-qg29-8w7f  (fix: 6.5.7)
+  CurlAsyncHTTPClient reuses pycurl handles without resetting per-request TLS
+  client-cert / proxy credentials, which can leak onto a later request to a
+  different host. Fixed in 6.5.7.
+
+[LOW] tornado 6.5.5 - CVE-2026-49854 / GHSA-cx3h-4qpv-8hc9  (fix: 6.5.6)
+  The native `tornado.speedups.websocket_mask` reads 4 bytes without checking
+  the mask length, exposing up to 3 bytes of uninitialized memory (reachable via
+  the XSRF token decoder with xsrf_cookies=True). Fixed in 6.5.6.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+* Core / default / [dev] / [ml] installs:  NO ACTION NEEDED (no vulnerable deps).
+* [dpi] extra: the 3 HIGH advisories are recorded in security/audit-allowlist.txt
+  as accepted risk (upstream mitmproxy pin blocks the fix). Re-evaluate when a
+  mitmproxy release lifts the msgpack/tornado version caps. Review date 2026-09-01.
+* CI enforces this: scripts/pip_audit_gate.py fails on any NEW / non-allow-listed
+  HIGH or CRITICAL advisory in any install profile.
+================================================================================
