@@ -15,7 +15,8 @@ data:
   MCP_LOG_LEVEL: "INFO"
   MCP_ALLOWED_SERVERS: ""
   MCP_MAX_PAYLOAD_KB: "512"
-  # Paths use /data/ which is backed by a PersistentVolumeClaim
-  # to ensure audit data persists across pod restarts.
+  # WAL uses per-pod emptyDir (ephemeral scratch space for write-ahead log).
+  # Audit data flows through structured JSON logs to stdout and is collected
+  # by a cluster-level log aggregator (Fluentd, Datadog Agent, etc.).
   MCP_WAL_PATH: "/data/mcp_monitor_wal.jsonl"
   MCP_AUDIT_PATH: "/data/mcp_monitor_audit.jsonl"

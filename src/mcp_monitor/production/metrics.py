@@ -69,7 +69,13 @@ class MetricsCollector:
             self._active_requests -= 1
 
     def observe_duration(self, duration_seconds: float) -> None:
-        """Record a request duration in the histogram."""
+        """Record a request duration in the histogram.
+
+        Note: ``_duration_buckets`` stores per-bucket (non-cumulative) counts.
+        Each observation increments only the bucket whose upper bound is the
+        first to satisfy ``duration <= bound``. The ``expose()`` method computes
+        cumulative sums at render time to produce correct Prometheus output.
+        """
         with self._lock:
             self._duration_sum += duration_seconds
             self._duration_count += 1
