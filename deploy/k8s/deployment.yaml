@@ -17,9 +17,8 @@ spec:
     spec:
       containers:
         - name: mcp-monitor
-          # Set the image tag to a specific version for production deployments.
-          # Replace YOUR_REGISTRY with your container registry (e.g., ghcr.io/org).
-          image: mcp-monitor:${IMAGE_TAG:-latest}
+          # Replace with your registry/tag, e.g. ghcr.io/org/mcp-monitor:v1.0.0
+          image: mcp-monitor:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
@@ -51,10 +50,12 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 3
           volumeMounts:
-            - name: data
+            - name: wal-data
               mountPath: /data
       volumes:
-        - name: data
-          persistentVolumeClaim:
-            claimName: mcp-monitor-data
+        # WAL is ephemeral per-pod scratch space. Audit data flows through
+        # structured JSON logs to stdout, collected by a log aggregator
+        # (e.g., Fluentd, Datadog Agent). No shared PVC needed.
+        - name: wal-data
+          emptyDir: {}
       terminationGracePeriodSeconds: 30
