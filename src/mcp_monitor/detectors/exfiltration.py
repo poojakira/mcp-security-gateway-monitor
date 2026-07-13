@@ -14,18 +14,37 @@ import re
 from typing import Any
 
 
+# Abuse-prone TLDs frequently used for throwaway attacker infrastructure. This
+# static list is a cheap first pass only; production deployments should layer a
+# live domain-reputation feed (e.g. an AbuseIPDB / PhishTank lookup) on top —
+# see ``reputation_lookup`` hook below.
+_SUSPICIOUS_TLDS = (
+    "tk|ml|ga|cf|gq|xyz|top|buzz|club|click|download|loan|date|men|win|bid|"
+    "trade|webcam|science|cam|mom|lol|work|review|stream|racing|party|gdn|pw|"
+    "zip|mov|country|kim|cricket|accountant|faith|link"
+)
+
 # Suspicious URL patterns (attacker infrastructure indicators)
 _SUSPICIOUS_URL_PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"https?://\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}"),  # raw IP
-    re.compile(r"https?://[^/]*\.(tk|ml|ga|cf|gq|xyz|top|buzz|club)/", re.IGNORECASE),
+    # Match the abuse-prone TLD at a host boundary (end, port, path, query or
+    # fragment) instead of requiring a trailing "/", which let "https://evil.tk"
+    # slip through unmatched.
+    re.compile(
+        rf"https?://[^/\s:]*\.(?:{_SUSPICIOUS_TLDS})(?=[:/?#]|$)",
+        re.IGNORECASE,
+    ),
     re.compile(r"https?://[^/]*ngrok\.io", re.IGNORECASE),
     re.compile(r"https?://[^/]*requestbin\.", re.IGNORECASE),
     re.compile(r"https?://[^/]*webhook\.site", re.IGNORECASE),
     re.compile(r"https?://[^/]*burpcollaborator\.", re.IGNORECASE),
 ]
 
-# Base64 detection (continuous base64 chars 100+ chars long)
+# Encoded-blob detection. We look for standard base64 AND url-safe base64
+# (which uses '-'/'_' instead of '+'/'/' and often drops '=' padding), since
+# attackers routinely switch encodings to dodge a single-alphabet regex.
 _BASE64_BLOB = re.compile(r"[A-Za-z0-9+/=]{100,}")
+_BASE64URL_BLOB = re.compile(r"[A-Za-z0-9_-]{100,}={0,2}")
 
 
 class ExfiltrationDetector:
@@ -69,19 +88,9 @@ class ExfiltrationDetector:
                 f"payload size {payload_kb:.1f}KB exceeds limit {self.max_payload_kb}KB"
             )
 
-        # 3. Base64 blob detection
-        base64_matches = _BASE64_BLOB.findall(payload_str)
-        for match in base64_matches:
-            # Verify it's actually valid base64
-            try:
-                decoded = base64.b64decode(match)
-                if len(decoded) > 1024:  # >1KB decoded = suspicious
-                    findings.append(
-                        f"large base64 blob detected ({len(decoded)} bytes decoded)"
-                    )
-                    break
-            except Exception:
-                pass
+        # 3. Encoded blob detection (standard + url-safe base64)
+        if self._has_large_encoded_blob(payload_str):
+            findings.append("large base64 blob detected")
 
         # 4. Suspicious URLs
         texts = self._extract_strings(output)
@@ -93,6 +102,23 @@ class ExfiltrationDetector:
 
         return (bool(findings), findings)
 
+    def _has_large_encoded_blob(self, payload_str: str, min_decoded: int = 1024) -> bool:
+        """Return True if payload contains a base64/base64url blob decoding to
+        more than ``min_decoded`` bytes."""
+        for pattern, decoder in (
+            (_BASE64_BLOB, base64.b64decode),
+            (_BASE64URL_BLOB, base64.urlsafe_b64decode),
+        ):
+            for match in pattern.findall(payload_str):
+                try:
+                    # Pad to a multiple of 4 so unpadded url-safe blobs decode.
+                    padded = match + "=" * (-len(match) % 4)
+                    if len(decoder(padded)) > min_decoded:
+                        return True
+                except Exception:
+                    continue
+        return False
+
     def detect_bcc_injection(self, email_payload: dict[str, Any]) -> bool:
         """Specifically detect the BCC injection attack from the Postmark incident.
 
@@ -102,30 +128,45 @@ class ExfiltrationDetector:
         - BCC fields in nested structures
         """
         # Direct BCC field
-        bcc = email_payload.get("bcc")
-        if bcc:
-            if isinstance(bcc, str) and bcc.strip():
-                return True
-            if isinstance(bcc, list) and len(bcc) > 0:
-                return True
+        if self._has_recipient(email_payload.get("bcc")):
+            return True
 
-        # Check nested headers for hidden recipients
+        # Check nested headers for hidden recipients (more header variants)
         headers = email_payload.get("headers", {})
         if isinstance(headers, dict):
             for key, value in headers.items():
-                if key.lower() in ("bcc", "x-bcc", "blind-copy"):
-                    if value:
+                if key.lower() in (
+                    "bcc",
+                    "x-bcc",
+                    "blind-copy",
+                    "blind-cc",
+                    "blindcopy",
+                ):
+                    if self._has_recipient(value):
                         return True
 
         # Check for BCC in a nested 'message' or 'email' sub-dict
         for key in ("message", "email", "mail"):
             nested = email_payload.get(key)
-            if isinstance(nested, dict):
-                nested_bcc = nested.get("bcc")
-                if nested_bcc:
-                    return True
+            if isinstance(nested, dict) and self._has_recipient(nested.get("bcc")):
+                return True
 
         return False
+
+    @staticmethod
+    def _has_recipient(value: Any) -> bool:
+        """True if *value* holds at least one non-empty recipient.
+
+        Guards against false positives from empty strings or lists containing
+        only blank entries (e.g. ``["", ""]``).
+        """
+        if isinstance(value, str):
+            return bool(value.strip())
+        if isinstance(value, (list, tuple, set)):
+            return any(str(item).strip() for item in value)
+        if isinstance(value, dict):
+            return any(str(item).strip() for item in value.values())
+        return value is not None and bool(str(value).strip())
 
     # ------------------------------------------------------------------
     # Internal helpers
