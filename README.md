@@ -119,13 +119,24 @@ This project implements a defense-in-depth architecture with 10 layers that work
 | 3 | **Kernel Monitor** | Watches syscall-level behavior: network connections, DNS lookups, file access, process spawning. Enforces per-server policies. |
 | 4 | **Semantic Intent Analyzer** | Understands what a tool call is trying to do. Detects BCC synonyms, exfiltration patterns, encoded emails, and suspicious fields. |
 | 5 | **Network Egress Policy** | Controls what destinations each server can reach. Default-deny with explicit allow rules. Blocks known-bad domains and oversized payloads. |
-| 6 | **ML Threat Classifier** | Machine learning model trained on attack patterns. Catches novel attacks that rule-based systems miss. |
+| 6 | **ML Threat Classifier** *(BETA)* | Experimental scikit-learn model (TF-IDF char n-grams + LogisticRegression) trained on a built-in synthetic corpus. Supplementary signal only — see the BETA note below for measured held-out performance. |
 | 7 | **Rate Limiter** | Limits blast radius by enforcing recipient whitelists and per-minute rate caps. Stops mass-exfiltration. |
 | 8 | **Honeypot Vault** | Plants canary tokens in tool responses. If a token appears somewhere it should not, an exfiltration path is confirmed. |
 | 9 | **Docker Sandbox** | Isolates untrusted MCP servers in network-restricted containers. Even if compromised, they cannot reach the internet. |
 | 10 | **Network Monitor + DPI** | Deep packet inspection comparing declared MCP intent against actual HTTP traffic. Catches tools that lie about what they send. |
 
 The first 5 layers run on every tool call with zero external dependencies. Layers 6-10 add ML, sandboxing, and deep inspection for production deployments.
+
+> **⚠️ ML Threat Classifier (Layer 6) is BETA.** Its `train()` reports a
+> cross-validation accuracy (~0.98) measured on its own built-in *synthetic*
+> corpus. That is a sanity figure, **not** production accuracy. On a real
+> external held-out benchmark (Hugging Face `deepset/prompt-injections`) the
+> BETA classifier measured **recall ≈ 0.317** with a **false-positive rate
+> ≈ 14.3%** on benign text. For reference, the rule-based regex
+> prompt-injection detector measured **recall ≈ 0.083 / 0% false positives**
+> on the same test. Use Layer 6 as a supplementary signal behind the
+> deterministic layers (1-5), not as a standalone defense. The detectors are
+> intentionally not tuned to any single benchmark.
 
 ---
 

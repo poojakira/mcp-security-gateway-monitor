@@ -1,17 +1,29 @@
-"""Layer 4+ : REAL ML-based threat classifier (scikit-learn).
+"""Layer 6 (BETA): ML-based threat classifier (scikit-learn).
 
-WHY THIS BEATS REGEX AGAINST A SOPHISTICATED ADVERSARY:
-Our regex rules are public — an attacker reads them and rephrases to evade.
-An ML model's decision boundary is a 10,000-dimensional hyperplane learned
-from data. You cannot "read around" it. Even with the source code, the
-attacker cannot enumerate every input that trips it.
+STATUS: BETA — experimental, NOT production-hardened. This classifier is a
+*supplementary* signal that runs behind the deterministic rule-based layers
+(1-5). Do not rely on it as a standalone line of defense.
 
-This is a REAL trained model. It uses TF-IDF character n-grams (which catch
-obfuscation regex misses) + a calibrated LogisticRegression / RandomForest
-ensemble. It trains on first use and persists to disk.
+MODEL: TF-IDF character n-grams (analyzer="char_wb", 2-4 grams) UNION a small
+set of structural/behavioral features, fed to a class-balanced
+LogisticRegression. It trains on a built-in *synthetic* corpus on first use
+and persists to disk (with a SHA-256 integrity check on load).
 
 Character n-grams matter: "b c c", "b.c.c", "ᖯcc" all share n-gram structure
 with "bcc" that word-level matching misses.
+
+MEASURED PERFORMANCE (honest, held-out):
+The ``cv_accuracy`` reported by ``train()`` (~0.98) is cross-validation on the
+model's OWN synthetic training corpus. It is a fixture / sanity figure and
+does NOT represent production accuracy. On a real external held-out benchmark
+(Hugging Face ``deepset/prompt-injections``) this BETA classifier measured
+**recall ≈ 0.317** with a **false-positive rate ≈ 14.3%** on benign text.
+Treat those held-out numbers — not the CV figure — as the realistic
+expectation. (For reference, the public-by-design regex prompt-injection
+detector measured recall ≈ 0.083 / 0% FP on the same test.)
+
+These figures are reported for transparency. Do not tune the detectors to any
+single benchmark.
 """
 
 from __future__ import annotations
@@ -132,10 +144,18 @@ _THREAT_FAMILIES = {
 
 
 class MLThreatClassifier:
-    """Real scikit-learn threat classifier for MCP tool calls.
+    """scikit-learn threat classifier for MCP tool calls (BETA).
 
-    Uses TF-IDF character n-grams + RandomForest. Trains on first use,
+    Uses TF-IDF character n-grams UNION structural features + a class-balanced
+    LogisticRegression. Trains on a built-in synthetic corpus on first use,
     persists the model, and classifies arbitrary tool-call JSON.
+
+    BETA — experimental. The ~0.98 ``cv_accuracy`` returned by :meth:`train`
+    is cross-validation on the synthetic training corpus and is NOT production
+    accuracy. On the real held-out ``deepset/prompt-injections`` benchmark this
+    classifier measured recall ≈ 0.317 / false-positive rate ≈ 14.3%. Use it as
+    a supplementary signal behind the deterministic rule-based layers, not as a
+    standalone defense.
     """
 
     def __init__(self, *, model_path: str | None = None, threshold: float = 0.6) -> None:
@@ -152,7 +172,6 @@ class MLThreatClassifier:
         """Train the classifier. Returns training metrics."""
         from sklearn.pipeline import Pipeline, FeatureUnion
         from sklearn.feature_extraction.text import TfidfVectorizer
-        from sklearn.ensemble import GradientBoostingClassifier
         from sklearn.linear_model import LogisticRegression
         from sklearn.model_selection import cross_val_score
         import numpy as np
@@ -191,7 +210,10 @@ class MLThreatClassifier:
         self._pipeline.fit(X, y)
         self._trained = True
 
-        # Cross-validation score for honesty about accuracy
+        # Cross-validation score on the synthetic TRAINING corpus only.
+        # This is a sanity/fixture figure — NOT production accuracy. Measured
+        # held-out performance on deepset/prompt-injections is recall ~0.317 /
+        # FP ~14.3%. See module docstring.
         try:
             scores = cross_val_score(self._pipeline, X, y, cv=min(5, len(mal), len(ben)))
             cv_mean = float(np.mean(scores))
