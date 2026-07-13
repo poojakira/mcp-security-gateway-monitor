@@ -30,10 +30,12 @@ jobs:
         run: |
           python -m pytest tests/ -v --cov=mcp_monitor --cov-report=term-missing
 
-      - name: Verify 342 tests collected
+      - name: Verify test suite is collected (guard against silent skips)
         run: |
           count=$(python -m pytest tests/ --collect-only -q 2>/dev/null | tail -1 | grep -oP '\d+(?= tests)')
-          if [ "$count" != "342" ]; then
-            echo "Expected 342 tests, got $count"
+          count=${count:-0}
+          if [ "$count" -lt 400 ]; then
+            echo "Expected at least 400 tests collected, got $count"
             exit 1
           fi
+          echo "Collected $count tests"
