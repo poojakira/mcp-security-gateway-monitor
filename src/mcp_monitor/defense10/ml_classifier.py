@@ -1,17 +1,22 @@
-"""Layer 4+ : REAL ML-based threat classifier (scikit-learn).
+"""Layer 4+ : ML-based threat classifier (scikit-learn). **BETA / QA.**
 
-WHY THIS BEATS REGEX AGAINST A SOPHISTICATED ADVERSARY:
-Our regex rules are public — an attacker reads them and rephrases to evade.
-An ML model's decision boundary is a 10,000-dimensional hyperplane learned
-from data. You cannot "read around" it. Even with the source code, the
-attacker cannot enumerate every input that trips it.
+HONEST STATUS (read this before relying on it — see NOVELTY.md):
+This model trains on a few dozen curated strings plus synthetically generated
+variants. That is a unit-test fixture, NOT a production dataset. Any
+cross-validation accuracy on ~100 samples has huge variance and is not evidence
+of real-world performance. Do not present it as a proven detector. It is a
+defense-in-depth *backstop* to the regex layer, not a replacement, until it is
+trained on real shadow-mode telemetry and a held-out false-positive rate is
+measured.
 
-This is a REAL trained model. It uses TF-IDF character n-grams (which catch
-obfuscation regex misses) + a calibrated LogisticRegression / RandomForest
-ensemble. It trains on first use and persists to disk.
+WHY ML *can* help vs regex (the aspiration, not a current guarantee):
+regex rules are public and an attacker rephrases to evade them; a learned
+decision boundary over character n-grams is harder to "read around". Character
+n-grams catch "b c c", "b.c.c", "ᖯcc" sharing structure with "bcc".
 
-Character n-grams matter: "b c c", "b.c.c", "ᖯcc" all share n-gram structure
-with "bcc" that word-level matching misses.
+Operationally: prefer loading a pre-trained, signed model (see load()); the
+orchestrator fails CLOSED if the classifier cannot initialize. Training on
+first use is a last resort and adds first-request latency.
 """
 
 from __future__ import annotations
@@ -240,37 +245,71 @@ class MLThreatClassifier:
         )
 
     def save(self, path: str) -> None:
-        """Persist the trained model to disk with integrity verification."""
+        """Persist the trained model to disk with an authenticated signature.
+
+        The signature is an HMAC-SHA256 keyed by ``MCP_MODEL_SIGNING_KEY``. A
+        bare co-located SHA-256 file is worthless: an attacker who can overwrite
+        the pickle can recompute and overwrite the checksum too. HMAC with a key
+        the attacker does not possess makes the signature meaningful.
+        """
+        import hmac as _hmac
         import pickle
         import hashlib as _hl
+
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         data = pickle.dumps(self._pipeline)
-        integrity = _hl.sha256(data).hexdigest()
         with open(path, "wb") as f:
             f.write(data)
-        with open(path + ".sha256", "w") as f:
-            f.write(integrity)
+
+        key = os.environ.get("MCP_MODEL_SIGNING_KEY")
+        if key:
+            sig = _hmac.new(key.encode(), data, _hl.sha256).hexdigest()
+            with open(path + ".sig", "w") as f:
+                f.write(sig)
+        else:
+            # No key configured: write a plain digest but clearly mark it as
+            # UNAUTHENTICATED so load() refuses it unless explicitly overridden.
+            with open(path + ".sha256", "w") as f:
+                f.write(_hl.sha256(data).hexdigest())
 
     def load(self, path: str) -> bool:
-        """Load a trained model from disk WITH integrity verification.
+        """Load a trained model, verifying an authenticated signature first.
 
-        Refuses to load if the SHA-256 checksum doesn't match, preventing
-        arbitrary code execution via tampered pickle files.
+        Unpickling is arbitrary code execution, so we fail CLOSED:
+          * ``MCP_MODEL_SIGNING_KEY`` set  -> require a matching HMAC ``.sig``.
+          * ``MCP_MODEL_SHA256`` set       -> require this out-of-band digest.
+          * neither                        -> refuse, unless
+            ``MCP_MODEL_ALLOW_UNVERIFIED=1`` is explicitly set (dev only).
+        A co-located ``.sha256`` alone is NOT accepted as authentication.
         """
+        import hmac as _hmac
         import pickle
         import hashlib as _hl
+
         if not os.path.exists(path):
             return False
-        checksum_path = path + ".sha256"
-        if not os.path.exists(checksum_path):
-            return False  # Refuse to load without integrity file
-        with open(checksum_path, "r") as f:
-            expected_hash = f.read().strip()
         with open(path, "rb") as f:
             data = f.read()
-        actual_hash = _hl.sha256(data).hexdigest()
-        if actual_hash != expected_hash:
-            return False  # INTEGRITY FAILURE — model file tampered
+        actual = _hl.sha256(data).hexdigest()
+
+        key = os.environ.get("MCP_MODEL_SIGNING_KEY")
+        expected_sha = os.environ.get("MCP_MODEL_SHA256")
+        sig_path = path + ".sig"
+
+        if key:
+            if not os.path.exists(sig_path):
+                return False
+            expected_sig = open(sig_path).read().strip()
+            good = _hmac.new(key.encode(), data, _hl.sha256).hexdigest()
+            if not _hmac.compare_digest(good, expected_sig):
+                return False  # forged/tampered model
+        elif expected_sha:
+            if not _hmac.compare_digest(actual, expected_sha.strip().lower()):
+                return False
+        elif os.environ.get("MCP_MODEL_ALLOW_UNVERIFIED") != "1":
+            # Fail closed: no trustworthy way to authenticate the pickle.
+            return False
+
         self._pipeline = pickle.loads(data)
         self._trained = True
         return True

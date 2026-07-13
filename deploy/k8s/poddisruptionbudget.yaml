@@ -1,0 +1,14 @@
+# Keep at least one gateway replica available during voluntary disruptions
+# (node drains, rolling updates) so inspection is never fully offline.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: mcp-monitor
+  namespace: mcp-monitor
+  labels:
+    app.kubernetes.io/name: mcp-monitor
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mcp-monitor

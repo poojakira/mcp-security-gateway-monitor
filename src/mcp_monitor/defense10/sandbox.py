@@ -88,13 +88,20 @@ class DockerSandbox:
         if c.no_new_privileges:
             args += ["--security-opt", "no-new-privileges"]
         args += ["--memory", c.memory, "--cpus", c.cpus]
-        # Validate extra_args — reject dangerous flags
-        _BLOCKED_PATTERNS = ("--privileged", "--network=host", "--network host",
-                             "--pid=host", "--pid host", "--volume", "-v ",
-                             "--cap-add", "--device")
+        # Strict allowlist: any flag token not explicitly permitted causes an
+        # immediate failure. Silently dropping a dangerous flag (the previous
+        # behavior) is worse than crashing — the operator believes a capability
+        # was applied when it was not, and substring blocklists are bypassable
+        # (e.g. "--cap-add=SYS_ADMIN" vs "--cap-add SYS_ADMIN").
         for ea in c.extra_args:
-            if any(bp in ea.lower() for bp in _BLOCKED_PATTERNS):
-                continue  # silently drop dangerous flags
+            token = str(ea)
+            if token.startswith("-"):
+                flag = token.split("=", 1)[0].strip()
+                if flag not in c._ALLOWED_EXTRA_ARGS:
+                    raise ValueError(
+                        f"Disallowed sandbox flag {flag!r} (from {ea!r}); "
+                        f"permitted flags: {sorted(c._ALLOWED_EXTRA_ARGS)}"
+                    )
             args.append(ea)
         args.append(c.image)
         args += cmd

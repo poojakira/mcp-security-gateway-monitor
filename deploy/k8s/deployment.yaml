@@ -17,15 +17,29 @@ spec:
     spec:
       containers:
         - name: mcp-monitor
-          # Replace with your registry/tag, e.g. ghcr.io/org/mcp-monitor:v1.0.0
+          # Pin to an immutable tag/digest, e.g. ghcr.io/org/mcp-monitor:v1.0.0
           image: mcp-monitor:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
               protocol: TCP
           envFrom:
             - configMapRef:
                 name: mcp-monitor-config
+          env:
+            # Secrets come from a Secret, never the ConfigMap (L3).
+            - name: MCP_WEBHOOK_URL
+              valueFrom:
+                secretKeyRef:
+                  name: mcp-monitor-secrets
+                  key: MCP_WEBHOOK_URL
+                  optional: true
+            - name: MCP_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: mcp-monitor-secrets
+                  key: MCP_API_TOKEN
+                  optional: true
           resources:
             requests:
               memory: "128Mi"
@@ -53,9 +67,18 @@ spec:
             - name: wal-data
               mountPath: /data
       volumes:
-        # WAL is ephemeral per-pod scratch space. Audit data flows through
-        # structured JSON logs to stdout, collected by a log aggregator
-        # (e.g., Fluentd, Datadog Agent). No shared PVC needed.
+        # WAL is per-pod scratch used only for crash replay within a pod's
+        # lifetime. The durable audit trail is shipped to a cluster log
+        # aggregator via stdout (MCP_AUDIT_STDOUT=1 in the ConfigMap), because
+        # an emptyDir is destroyed on pod restart/reschedule and MUST NOT be
+        # treated as the system of record.
+        #
+        # If you require the on-disk audit file to survive restarts, replace the
+        # emptyDir below with a PersistentVolumeClaim (use a StatefulSet for
+        # per-replica RWO volumes):
+        #   - name: wal-data
+        #     persistentVolumeClaim:
+        #       claimName: mcp-monitor-wal
         - name: wal-data
           emptyDir: {}
       terminationGracePeriodSeconds: 30

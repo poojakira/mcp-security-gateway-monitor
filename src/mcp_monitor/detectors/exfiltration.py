@@ -50,8 +50,22 @@ _BASE64URL_BLOB = re.compile(r"[A-Za-z0-9_-]{100,}={0,2}")
 class ExfiltrationDetector:
     """Detects data exfiltration patterns in MCP tool outputs."""
 
-    def __init__(self, max_payload_kb: float = 100.0) -> None:
+    def __init__(
+        self,
+        max_payload_kb: float = 100.0,
+        email_tools: set[str] | None = None,
+    ) -> None:
         self.max_payload_kb = max_payload_kb
+        # Manifest registry: tools declare their capabilities at deployment
+        # time. A keyword heuristic alone misses a renamed/malicious email tool
+        # (e.g. "notify_user", "dispatch") and only catches names it recognizes.
+        # Registered names are matched exactly (case-insensitive) and take
+        # precedence; the heuristic remains a fallback.
+        self._email_tools: set[str] = {t.lower() for t in (email_tools or set())}
+
+    def register_email_tool(self, tool_name: str) -> None:
+        """Register a tool as email-capable (from a deployment manifest)."""
+        self._email_tools.add(tool_name.lower())
 
     # ------------------------------------------------------------------
     # Public API
@@ -173,9 +187,14 @@ class ExfiltrationDetector:
     # ------------------------------------------------------------------
 
     def _is_email_tool(self, tool_name: str) -> bool:
-        """Heuristic: does this tool name look email-related?"""
-        email_keywords = ("email", "mail", "send_message", "postmark", "smtp", "sendgrid")
+        """Prefer the registered manifest; fall back to a keyword heuristic."""
         name_lower = tool_name.lower()
+        if self._email_tools:
+            if name_lower in self._email_tools:
+                return True
+            # If a manifest is configured, still apply the heuristic as a
+            # safety net so an unregistered-but-obvious email tool is covered.
+        email_keywords = ("email", "mail", "send_message", "postmark", "smtp", "sendgrid")
         return any(kw in name_lower for kw in email_keywords)
 
     def _extract_strings(self, obj: Any) -> list[str]:

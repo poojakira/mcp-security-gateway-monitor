@@ -249,11 +249,23 @@ print(f"Blocked: {report.blocked}/{report.total_attacks}")
 ## Test Results
 
 ```
-963 statements | 0 missed | 100% code coverage
-234 tests | 0 failures | ~0.5s runtime
+Tests: 0 failures | ~0.5s runtime
 Verified on: Python 3.9, 3.10, 3.11, 3.12, 3.13
 Platforms:   Ubuntu Linux, Windows, macOS
 ```
+
+> **On coverage.** Run coverage with the ML extra installed so Layer 6 (the
+> scikit-learn classifier) is included, otherwise it is skipped and the number
+> is inflated:
+>
+> ```bash
+> pip install -e ".[dev,ml]"
+> pytest tests/ --cov=mcp_monitor --cov-branch --cov-report=term-missing
+> ```
+>
+> Statement coverage alone is not a strength guarantee. Use `--cov-branch` for
+> branch coverage and a mutation tool (e.g. `mutmut`) to gauge how much the
+> tests actually assert.
 
 ---
 

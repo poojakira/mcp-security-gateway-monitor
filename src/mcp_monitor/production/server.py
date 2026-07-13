@@ -8,6 +8,7 @@ tracing, shadow mode, and graceful shutdown.
 from __future__ import annotations
 
 import asyncio
+import hmac
 import json
 import os
 import tempfile
@@ -81,7 +82,33 @@ class ProductionServer:
             on_shutdown=self._flush_wal,
         )
 
+        # Optional API authentication. When MCP_API_TOKEN (or config.auth_token)
+        # is set, all non-probe endpoints require "Authorization: Bearer <token>".
+        # Without it any process that can reach the port could read verdicts or
+        # influence decisions. Health/readiness stay public for k8s probes.
+        # For stronger guarantees, terminate mutual TLS at a sidecar/mesh.
+        self._auth_token: Optional[str] = (
+            getattr(self.config, "auth_token", None)
+            or os.environ.get("MCP_API_TOKEN")
+        )
+        if not self._auth_token:
+            self._logger.warning(
+                "No API auth configured (set MCP_API_TOKEN); endpoints are "
+                "unauthenticated. Rely on network policy / mTLS in the mesh."
+            )
+
         self._server: Optional[asyncio.Server] = None
+
+    _PUBLIC_PATHS = frozenset({"/v1/health", "/v1/ready"})
+
+    def _authorized(self, path: str, headers: Dict[str, str]) -> bool:
+        """Return True if the request may proceed (auth off, public path, or
+        a valid bearer token)."""
+        if not self._auth_token or path in self._PUBLIC_PATHS:
+            return True
+        provided = headers.get("authorization", "")
+        expected = f"Bearer {self._auth_token}"
+        return hmac.compare_digest(provided, expected)
 
     def _flush_wal(self) -> None:
         """Flush the WAL during shutdown."""
@@ -279,6 +306,10 @@ class ProductionServer:
         span_id: str,
     ) -> Tuple[int, Any]:
         """Route a request to the appropriate handler."""
+        # Authentication gate (before any work). Probes remain public.
+        if not self._authorized(path, headers):
+            return 401, {"error": "Unauthorized"}
+
         # Health check
         if method == "GET" and path == "/v1/health":
             return self._handle_health()
@@ -449,6 +480,7 @@ class ProductionServer:
         status_messages = {
             200: "OK",
             400: "Bad Request",
+            401: "Unauthorized",
             404: "Not Found",
             413: "Payload Too Large",
             429: "Too Many Requests",

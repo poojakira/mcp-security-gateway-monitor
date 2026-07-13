@@ -10,12 +10,20 @@ from __future__ import annotations
 
 import json
 import os
-import tempfile
+import threading
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
 from mcp_monitor.audit.log import AuditEntry
+
+try:  # POSIX advisory locking for cross-process safety
+    import fcntl
+
+    _HAVE_FCNTL = True
+except ImportError:  # pragma: no cover - Windows
+    fcntl = None  # type: ignore
+    _HAVE_FCNTL = False
 
 
 class WriteAheadLog:
@@ -24,6 +32,8 @@ class WriteAheadLog:
     def __init__(self, wal_path: str) -> None:
         self._wal_path = Path(wal_path)
         self._wal_path.parent.mkdir(parents=True, exist_ok=True)
+        # In-process serialization of concurrent writers.
+        self._lock = threading.Lock()
         # Track committed position
         self._committed_count: int = 0
         self._entries_written: int = self._count_existing_entries()
@@ -33,33 +43,52 @@ class WriteAheadLog:
     # ------------------------------------------------------------------
 
     def write(self, entry: AuditEntry) -> None:
-        """Atomically write an entry to the WAL.
+        """Append an entry to the WAL durably and without a TOCTOU window.
 
-        Uses write-to-temp + append pattern to minimize corruption risk.
+        A single ``O_APPEND`` write is atomic for line-sized payloads on POSIX,
+        so there is no temp file to read back (the previous temp-file +
+        double-read pattern was racy and left Windows debris). We additionally:
+          * take an in-process lock to serialize threads,
+          * take an advisory file lock (``flock``) to serialize processes,
+          * ``fsync`` the file, and
+          * ``fsync`` the parent directory so the append is truly durable.
         """
-        data = json.dumps(asdict(entry))
-        # Atomic-ish append: write to temp then append
-        dir_path = str(self._wal_path.parent)
-        fd, tmp_path = tempfile.mkstemp(dir=dir_path, suffix=".wal.tmp")
-        try:
-            os.write(fd, (data + "\n").encode("utf-8"))
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+        line = (json.dumps(asdict(entry)) + "\n").encode("utf-8")
+        with self._lock:
+            # Open in append+binary; O_APPEND makes each write atomic at the OS
+            # level so interleaved lines never corrupt each other.
+            fd = os.open(
+                str(self._wal_path),
+                os.O_WRONLY | os.O_CREAT | os.O_APPEND,
+                0o600,
+            )
+            try:
+                if _HAVE_FCNTL:
+                    fcntl.flock(fd, fcntl.LOCK_EX)
+                os.write(fd, line)
+                os.fsync(fd)
+            finally:
+                if _HAVE_FCNTL:
+                    try:
+                        fcntl.flock(fd, fcntl.LOCK_UN)
+                    except OSError:
+                        pass
+                os.close(fd)
+            self._fsync_dir()
+            self._entries_written += 1
 
-        # Append temp content to WAL
-        with open(tmp_path, "r", encoding="utf-8") as tmp_f:
-            content = tmp_f.read()
-        with self._wal_path.open("a", encoding="utf-8") as wal_f:
-            wal_f.write(content)
-            wal_f.flush()
-            os.fsync(wal_f.fileno())
-
+    def _fsync_dir(self) -> None:
+        """fsync the parent directory so the file append/metadata is durable."""
+        if not _HAVE_FCNTL:  # directory fsync is a POSIX concept
+            return
         try:
-            os.unlink(tmp_path)
-        except OSError:
-            pass  # On Windows, file may still be locked; cleanup on next write
-        self._entries_written += 1
+            dfd = os.open(str(self._wal_path.parent), os.O_RDONLY)
+            try:
+                os.fsync(dfd)
+            finally:
+                os.close(dfd)
+        except OSError:  # pragma: no cover - platform dependent
+            pass
 
     def recover(self) -> list[AuditEntry]:
         """Replay uncommitted entries from the WAL.

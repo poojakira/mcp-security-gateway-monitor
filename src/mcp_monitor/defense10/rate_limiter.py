@@ -14,6 +14,8 @@ That converts a catastrophic breach into a minor, contained incident.
 
 from __future__ import annotations
 
+import logging
+import os
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
@@ -81,6 +83,15 @@ class RecipientWhitelist:
     def __init__(self, *, auto_learn: bool = False) -> None:
         self._approved: dict[str, set[str]] = defaultdict(set)
         self._pending: list[dict[str, Any]] = []
+        # auto_learn silently approves any new recipient the first time it is
+        # seen — which lets an attacker auto-approve their OWN exfil domain,
+        # defeating the whole control. Force it off in production.
+        if auto_learn and os.environ.get("MCP_ENV", "").lower() == "production":
+            logging.getLogger(__name__).critical(
+                "RecipientWhitelist auto_learn requested but disabled: "
+                "auto-learning approvals is unsafe in production."
+            )
+            auto_learn = False
         self._auto_learn = auto_learn
 
     def approve(self, server_id: str, recipient: str) -> None:

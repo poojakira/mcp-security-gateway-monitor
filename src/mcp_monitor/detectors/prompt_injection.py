@@ -6,11 +6,42 @@ patterns that attempt to override system instructions or jailbreak the model.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import html
 import re
 import unicodedata
-from typing import Any
+from typing import Any, Callable, Optional
 from urllib.parse import unquote
+
+# Base64 / base64url blobs long enough to plausibly hide a payload.
+_B64_TOKEN = re.compile(r"[A-Za-z0-9+/_-]{16,}={0,2}")
+
+
+def _decode_base64_candidates(text: str) -> list[str]:
+    """Return printable strings decoded from base64/base64url blobs in *text*.
+
+    Attackers commonly base64-encode an injection to slip past literal regexes.
+    We decode any sufficiently long blob and hand the plaintext back for
+    scanning. Non-text / invalid blobs are ignored.
+    """
+    out: list[str] = []
+    for token in _B64_TOKEN.findall(text):
+        padded = token + "=" * (-len(token) % 4)
+        for decoder in (base64.b64decode, base64.urlsafe_b64decode):
+            try:
+                raw = decoder(padded)
+            except (binascii.Error, ValueError):
+                continue
+            try:
+                decoded = raw.decode("utf-8")
+            except UnicodeDecodeError:
+                continue
+            # Only keep mostly-printable results to avoid noise.
+            if decoded and sum(c.isprintable() for c in decoded) >= 0.8 * len(decoded):
+                out.append(decoded)
+                break
+    return out
 
 # Hard cap on the number of characters fed to the regex engine per string.
 # Bounds worst-case regex cost (ReDoS / memory exhaustion) regardless of the
@@ -146,8 +177,17 @@ INJECTION_PATTERNS = [
 class PromptInjectionDetector:
     """Detects prompt injection attempts in MCP tool call arguments."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        classifier: Optional[Callable[[str], bool]] = None,
+    ) -> None:
         self.patterns = INJECTION_PATTERNS
+        # Optional ML backstop. Regex catches known families; a fine-tuned
+        # classifier (e.g. DistilBERT on a prompt-injection dataset) catches
+        # novel phrasings/synonyms the regexes miss. Inject any callable
+        # ``str -> bool``; when it flags input, an "ml_classifier" match is
+        # added. Kept optional so the detector stays zero-dependency by default.
+        self._classifier = classifier
 
     # ------------------------------------------------------------------
     # Public API
@@ -167,14 +207,37 @@ class PromptInjectionDetector:
         """
         arguments = tool_call.get("arguments", {})
         texts = self._extract_strings(arguments)
-        matched: list[str] = []
+
+        # Split-argument reconstruction: an attacker can split a payload across
+        # multiple argument fields ("ignore" / "previous" / "instructions") so
+        # no single value matches. Scan the joined view as well.
+        if len(texts) > 1:
+            texts = texts + [" ".join(texts), "".join(texts)]
+
+        # Base64 reconstruction: also scan anything decoded from base64 blobs.
+        decoded: list[str] = []
         for text in texts:
+            decoded.extend(_decode_base64_candidates(text))
+        scan_targets = texts + decoded
+
+        matched: list[str] = []
+        for text in scan_targets:
             for variant in _scan_variants(text):
                 for name, pattern in self.patterns:
                     if name in matched:
                         continue
                     if pattern.search(variant):
                         matched.append(name)
+
+        # Optional ML backstop over the normalized, reconstructed text.
+        if self._classifier is not None and "ml_classifier" not in matched:
+            try:
+                blob = _normalize(" ".join(scan_targets))
+                if self._classifier(blob):
+                    matched.append("ml_classifier")
+            except Exception:  # never let the ML hook break detection
+                pass
+
         return (bool(matched), matched)
 
     def risk_score(self, tool_call: dict[str, Any]) -> int:

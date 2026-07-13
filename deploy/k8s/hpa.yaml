@@ -18,4 +18,6 @@ spec:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: 70
+          # Lower target for a latency-sensitive security gateway: scale out
+          # before CPU saturation adds inspection latency.
+          averageUtilization: 50

@@ -8,15 +8,17 @@ metadata:
 data:
   MCP_LISTEN_PORT: "8080"
   MCP_SHADOW_MODE: "false"
-  MCP_WEBHOOK_URL: ""
+  # NOTE: MCP_WEBHOOK_URL and MCP_API_TOKEN are secrets and live in the Secret
+  # (see secret.yaml), NOT here.
   MCP_RATE_LIMIT_RPM: "600"
   MCP_CIRCUIT_BREAKER_THRESHOLD: "5"
   MCP_CIRCUIT_BREAKER_TIMEOUT: "30"
   MCP_LOG_LEVEL: "INFO"
   MCP_ALLOWED_SERVERS: ""
   MCP_MAX_PAYLOAD_KB: "512"
-  # WAL uses per-pod emptyDir (ephemeral scratch space for write-ahead log).
-  # Audit data flows through structured JSON logs to stdout and is collected
-  # by a cluster-level log aggregator (Fluentd, Datadog Agent, etc.).
+  # WAL uses per-pod emptyDir (ephemeral crash-replay scratch only). The durable
+  # audit trail is mirrored to stdout as structured JSON and collected by a
+  # cluster log aggregator (Fluentd, Datadog Agent, etc.).
+  MCP_AUDIT_STDOUT: "true"
   MCP_WAL_PATH: "/data/mcp_monitor_wal.jsonl"
   MCP_AUDIT_PATH: "/data/mcp_monitor_audit.jsonl"
