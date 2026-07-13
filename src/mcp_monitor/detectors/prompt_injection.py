@@ -6,8 +6,56 @@ patterns that attempt to override system instructions or jailbreak the model.
 
 from __future__ import annotations
 
+import html
 import re
+import unicodedata
 from typing import Any
+from urllib.parse import unquote
+
+# Hard cap on the number of characters fed to the regex engine per string.
+# Bounds worst-case regex cost (ReDoS / memory exhaustion) regardless of the
+# size of attacker-supplied input.
+_MAX_SCAN_LEN = 100_000
+
+# Zero-width / invisible characters commonly inserted between letters to evade
+# substring/regex matching (e.g. "d\u200bi\u200bs\u200br...").
+_ZERO_WIDTH = dict.fromkeys(
+    map(ord, "\u200b\u200c\u200d\u200e\u200f\u2060\ufeff\u00ad"), None
+)
+
+
+def _normalize(text: str) -> str:
+    """Canonicalize text to defeat common obfuscation before pattern matching.
+
+    - NFKC folds Unicode homoglyphs / full-width / mathematical variants back to
+      their ASCII equivalents.
+    - Zero-width and soft-hyphen characters are stripped.
+    """
+    text = text[:_MAX_SCAN_LEN]
+    text = unicodedata.normalize("NFKC", text)
+    return text.translate(_ZERO_WIDTH)
+
+
+def _scan_variants(text: str) -> list[str]:
+    """Return normalized views of *text* to scan (raw + percent/HTML-decoded).
+
+    Attackers hide payloads behind URL-encoding (``%64%69...``) or HTML entities
+    (``&#100;...``); we scan both the decoded and original forms so neither a
+    literal nor an encoded injection slips through. Results are de-duplicated.
+    """
+    variants: list[str] = []
+    seen: set[str] = set()
+    for candidate in (
+        text,
+        unquote(text),
+        html.unescape(text),
+        html.unescape(unquote(text)),
+    ):
+        norm = _normalize(candidate)
+        if norm not in seen:
+            seen.add(norm)
+            variants.append(norm)
+    return variants
 
 
 # At least 10 patterns covering the major injection families.
@@ -86,6 +134,14 @@ INJECTION_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ),
 ]
 
+# Recompile every pattern with DOTALL so "." also matches newlines. Otherwise an
+# attacker can split a payload across lines (e.g. "disregard\nall\nrules") and
+# slip past the ".{0,N}" gaps. Bounded quantifiers keep backtracking safe.
+INJECTION_PATTERNS = [
+    (name, re.compile(pattern.pattern, pattern.flags | re.DOTALL))
+    for name, pattern in INJECTION_PATTERNS
+]
+
 
 class PromptInjectionDetector:
     """Detects prompt injection attempts in MCP tool call arguments."""
@@ -113,9 +169,12 @@ class PromptInjectionDetector:
         texts = self._extract_strings(arguments)
         matched: list[str] = []
         for text in texts:
-            for name, pattern in self.patterns:
-                if pattern.search(text) and name not in matched:
-                    matched.append(name)
+            for variant in _scan_variants(text):
+                for name, pattern in self.patterns:
+                    if name in matched:
+                        continue
+                    if pattern.search(variant):
+                        matched.append(name)
         return (bool(matched), matched)
 
     def risk_score(self, tool_call: dict[str, Any]) -> int:

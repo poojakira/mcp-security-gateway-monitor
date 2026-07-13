@@ -16,6 +16,10 @@ from mcp_monitor.detectors.pii_detector import PIIDetector
 from mcp_monitor.detectors.prompt_injection import PromptInjectionDetector
 from mcp_monitor.detectors.shadow_server import ShadowServerDetector
 
+# Reject payloads larger than this (bytes of the serialized call) before running
+# any regex detector, bounding worst-case scan cost / ReDoS memory pressure.
+MAX_INSPECT_BYTES = 1_000_000
+
 
 class MCPSecurityMonitor:
     """Orchestrates all security detectors for MCP tool calls."""
@@ -55,6 +59,25 @@ class MCPSecurityMonitor:
         findings: list[str] = []
         risk_scores: list[int] = []
 
+        # 0. Oversized payload guard (fail-closed before regex scanning)
+        if len(str(tool_call)) > MAX_INSPECT_BYTES:
+            self.audit_log.append(
+                event_type="tool_call_inspected",
+                data={
+                    "call_id": call_id,
+                    "tool_name": tool_call.get("name", ""),
+                    "allowed": False,
+                    "risk_score": 100,
+                    "findings": ["oversized_payload"],
+                },
+            )
+            return {
+                "allowed": False,
+                "risk_score": 100,
+                "findings": ["oversized_payload"],
+                "call_id": call_id,
+            }
+
         # 1. Prompt injection
         injected, patterns = self.injection_detector.detect(tool_call)
         if injected:
@@ -86,8 +109,10 @@ class MCPSecurityMonitor:
                 findings.append(f"exfiltration:{r}")
             risk_scores.append(70 + 5 * len(exfil_reasons))
 
-        # Compute final risk score
-        risk_score = min(max(risk_scores, default=0), 100)
+        # Cumulative scoring: overlapping weak signals must be able to add up to
+        # a block. A max-only threshold let an attacker keep every individual
+        # detector just under the limit and pass.
+        risk_score = min(sum(risk_scores), 100)
         allowed = risk_score < 50 and not is_shadow
 
         # Log to audit
@@ -146,7 +171,7 @@ class MCPSecurityMonitor:
                 findings.append(f"pii_output:{pii_type}:{len(values)}")
             risk_scores.append(50 + 10 * len(pii_results))
 
-        risk_score = min(max(risk_scores, default=0), 100)
+        risk_score = min(sum(risk_scores), 100)
         allowed = risk_score < 50
 
         # Log to audit

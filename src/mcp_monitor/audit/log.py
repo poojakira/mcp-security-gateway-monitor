@@ -10,11 +10,15 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
+import os
 import time
 import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -108,10 +112,14 @@ class AuditLog:
     # ------------------------------------------------------------------
 
     def _persist(self, entry: AuditEntry) -> None:
-        """Append a single entry to the log file."""
+        """Append a single entry to the log file, durably (flush + fsync)."""
         self._log_file.parent.mkdir(parents=True, exist_ok=True)
         with self._log_file.open("a", encoding="utf-8") as f:
             f.write(json.dumps(asdict(entry)) + "\n")
+            # Ensure the tamper-evident entry hits disk before we proceed, so a
+            # crash immediately after append cannot lose the last record.
+            f.flush()
+            os.fsync(f.fileno())
 
     def _load(self) -> None:
         """Load existing entries from the log file."""
@@ -132,3 +140,14 @@ class AuditLog:
                     entry_hash=raw["entry_hash"],
                 )
                 self._entries.append(entry)
+
+        # Verify the hash chain immediately after loading. A tampered or
+        # truncated on-disk log must raise a loud alert at startup rather than
+        # being trusted silently until someone happens to call verify_chain().
+        intact, broken_at = self.verify_chain()
+        if not intact:
+            log.critical(
+                "AUDIT LOG INTEGRITY FAILURE: hash chain broken at index %s in %s",
+                broken_at,
+                self._log_file,
+            )

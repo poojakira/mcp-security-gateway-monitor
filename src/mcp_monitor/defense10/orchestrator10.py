@@ -18,10 +18,14 @@ A call must survive ALL layers. Any single trip blocks + records.
 
 from __future__ import annotations
 
+import logging
+import os
 import time
 import uuid
 from dataclasses import dataclass, field
 from typing import Any
+
+log = logging.getLogger(__name__)
 
 from mcp_monitor.defense10.ml_classifier import MLThreatClassifier
 from mcp_monitor.defense10.rate_limiter import RateLimiter, RecipientWhitelist
@@ -50,7 +54,9 @@ class Verdict10:
 class Defense10:
     """Complete defense-in-depth orchestrator toward 10/10."""
 
-    def __init__(self, *, email_rate_per_hour: int = 10) -> None:
+    def __init__(
+        self, *, email_rate_per_hour: int = 10, ml_fail_open: bool | None = None
+    ) -> None:
         self.ml = MLThreatClassifier()
         self.rate = RateLimiter()
         self.whitelist = RecipientWhitelist()
@@ -61,12 +67,30 @@ class Defense10:
         self._email_rate = email_rate_per_hour
         self._verdicts: list[Verdict10] = []
         self._max_verdicts = 10000  # Prevent unbounded memory growth
-        # Graceful ML degradation — if sklearn not available or training fails
+        # If the ML layer cannot initialize, do we keep serving (fail-open) or
+        # block everything at L4 (fail-closed)? Security default is fail-closed;
+        # operators can opt into degraded operation via MCP_ML_FAIL_OPEN=1.
+        if ml_fail_open is None:
+            ml_fail_open = os.environ.get("MCP_ML_FAIL_OPEN", "").lower() in (
+                "1",
+                "true",
+                "yes",
+            )
+        self._ml_fail_open = ml_fail_open
         try:
             self.ml.train()
             self._ml_available = True
-        except Exception:
+        except Exception as e:
             self._ml_available = False
+            # Never silently drop a defense layer. Announce it loudly so the
+            # degraded posture is visible in logs/alerting.
+            log.critical(
+                "ML threat classifier UNAVAILABLE (%s). L4 will %s.",
+                e,
+                "be skipped (FAIL-OPEN)"
+                if self._ml_fail_open
+                else "BLOCK all calls (FAIL-CLOSED)",
+            )
 
     def configure_server(self, server_id: str, approved_domains: list[str]) -> None:
         """Set up per-server policy: rate limits + approved recipient domains."""
@@ -91,13 +115,23 @@ class Defense10:
                                [f"canary token exfiltrated: {t.token_id}" for t in trips], 100, passed)
         passed.append("L9_honeypot")
 
-        # L4: ML classifier (opaque to adversary) — graceful degradation
+        # L4: ML classifier (opaque to adversary)
         if self._ml_available:
             pred = self.ml.classify(tool_call)
             if pred.is_threat:
                 return self._block(call_id, "L4_ml_classifier",
                                    [f"ML threat conf={pred.confidence} family={pred.threat_family}"],
                                    int(pred.confidence * 100), passed)
+        elif not self._ml_fail_open:
+            # Fail-closed: a configured-but-missing ML layer must not silently
+            # let calls through.
+            return self._block(
+                call_id,
+                "L4_ml_classifier",
+                ["ML classifier unavailable; failing closed"],
+                100,
+                passed,
+            )
         passed.append("L4_ml_classifier")
 
         # L8: recipient whitelist

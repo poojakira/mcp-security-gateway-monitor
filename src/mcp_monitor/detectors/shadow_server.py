@@ -7,8 +7,11 @@ operator.
 
 from __future__ import annotations
 
+import logging
 import time
 from typing import Any
+
+log = logging.getLogger(__name__)
 
 
 class ShadowServerDetector:
@@ -18,6 +21,15 @@ class ShadowServerDetector:
         self._allowed: set[str] = set(allowed_servers)
         # server_id -> {capabilities, registered_at, call_count}
         self._registry: dict[str, dict[str, Any]] = {}
+        if not self._allowed:
+            # Default-deny is correct, but an empty allow-list means EVERY server
+            # is flagged as shadow — almost always a misconfiguration. Make the
+            # degraded state loud instead of silent.
+            log.critical(
+                "ShadowServerDetector initialized with an EMPTY allowed_servers "
+                "set: all servers will be treated as shadow/untrusted. Register "
+                "trusted servers or this will block everything."
+            )
 
     # ------------------------------------------------------------------
     # Public API

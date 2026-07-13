@@ -7,8 +7,9 @@ detection and in-place redaction.
 
 from __future__ import annotations
 
+import ipaddress
 import re
-from typing import Any
+from typing import Any, Callable
 
 
 # Minimum 8 PII types.
@@ -17,17 +18,65 @@ PII_PATTERNS: dict[str, re.Pattern[str]] = {
         r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}"
     ),
     "ssn": re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
-    "credit_card": re.compile(r"\b\d{4}[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{4}\b"),
+    # 16-digit (Visa/MC/Discover) and 15-digit AMEX (34/37 prefix). Matches are
+    # additionally Luhn-validated (see _VALIDATORS) to cut false positives on
+    # arbitrary long digit runs (timestamps, ids, ...).
+    "credit_card": re.compile(
+        r"\b(?:\d{4}[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{4}"
+        r"|3[47]\d{2}[\s\-]?\d{6}[\s\-]?\d{5})\b"
+    ),
     "phone_us": re.compile(r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b"),
     "ip_address": re.compile(
         r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b"
     ),
+    # Loose IPv6 candidate; strictly validated with the ipaddress module.
+    "ipv6_address": re.compile(r"\b(?=[0-9A-Fa-f:]*::|(?:[0-9A-Fa-f]{1,4}:){7})[0-9A-Fa-f:]{2,45}\b"),
     "date_of_birth": re.compile(
         r"\b(0[1-9]|1[0-2])/(0[1-9]|[12]\d|3[01])/(19|20)\d{2}\b"
     ),
     "passport": re.compile(r"\b[A-Z]{1,2}\d{6,9}\b"),
     "aws_key": re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
     "api_key": re.compile(r"\b(sk|pk)[-_](?:live|test)[-_][a-zA-Z0-9]{24,}\b"),
+}
+
+
+def _luhn_valid(candidate: str) -> bool:
+    """Return True if *candidate* (digits, spaces or dashes) passes Luhn."""
+    digits = [int(c) for c in candidate if c.isdigit()]
+    if len(digits) not in (15, 16):
+        return False
+    total = 0
+    for i, d in enumerate(reversed(digits)):
+        if i % 2 == 1:
+            d *= 2
+            if d > 9:
+                d -= 9
+        total += d
+    return total % 10 == 0
+
+
+def _valid_ipv4(candidate: str) -> bool:
+    try:
+        ipaddress.IPv4Address(candidate)
+        return True
+    except ValueError:
+        return False
+
+
+def _valid_ipv6(candidate: str) -> bool:
+    try:
+        ipaddress.IPv6Address(candidate)
+        return True
+    except ValueError:
+        return False
+
+
+# Post-match validators: a match is only reported if the validator (if any)
+# accepts it. This keeps detection precise while leaving redaction conservative.
+_VALIDATORS: dict[str, Callable[[str], bool]] = {
+    "credit_card": _luhn_valid,
+    "ip_address": _valid_ipv4,
+    "ipv6_address": _valid_ipv6,
 }
 
 
@@ -46,6 +95,9 @@ class PIIDetector:
         findings: dict[str, list[str]] = {}
         for pii_type, pattern in self.patterns.items():
             matches = pattern.findall(text)
+            validator = _VALIDATORS.get(pii_type)
+            if validator:
+                matches = [m for m in matches if validator(m)]
             if matches:
                 findings[pii_type] = matches
         return findings
