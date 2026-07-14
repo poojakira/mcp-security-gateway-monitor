@@ -1,4 +1,4 @@
-"""The 10/10 Orchestrator — unifies all defense layers into one verdict.
+"""10-layer defense orchestrator for combining available signals into one verdict.
 
 Chains the original 5 layers with the defense10 components:
 
@@ -13,7 +13,8 @@ Chains the original 5 layers with the defense10 components:
   L9  Honeypot canaries            (zero-false-positive compromise proof)
   L10 Sandbox isolation            (kernel-enforced, no bypass)
 
-A call must survive ALL layers. Any single trip blocks + records.
+Configured layers contribute pass/block signals. A single high-severity trip can block
+and record a verdict, but coverage depends on deployment and enabled integrations.
 """
 
 from __future__ import annotations

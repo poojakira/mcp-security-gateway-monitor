@@ -1,6 +1,6 @@
 # Research Report: MCP Security Gateway Monitor
 
-**Author:** Senior Research Engineering Team (30 years industry experience)  
+**Author:** Repository research assessment
 **Date:** July 10, 2026  
 **Classification:** Honest, Skeptical Technical Assessment  
 **Repository:** github.com/poojakira/mcp-security-gateway-monitor
@@ -29,7 +29,7 @@ A Python library (zero external dependencies, stdlib-only) that provides:
 4. **Red Team Simulator** — 17 documented attack patterns for validation
 5. **Security Dashboard** — terminal + HTML visualization
 
-**Scale:** 42 Python files, ~3,600 lines of code, 313 automated tests.
+**Scale:** Historical local snapshot: 42 Python files, ~3,600 lines of code, 313 automated tests. Re-run repository metrics before citing current counts.
 
 ---
 
@@ -107,9 +107,9 @@ changes behavior.
 | 5 | Provide tamper-evident audit trail | YES | SHA-256 hash chain; cryptographically sound |
 | 6 | Detect behavioral drift between versions | YES | New-field detection works; same-field value changes harder |
 | 7 | Enforce declarative security policies | YES | Invariant system is well-designed |
-| 8 | Achieve 100% test coverage | YES | 313 tests, all passing |
+| 8 | Test suite | CURRENT LOCAL SNAPSHOT | 462 tests passed with 1 warning on Windows/Python 3.12.9 (2026-07-14); coverage not re-run |
 | 9 | Zero external dependencies | YES | Pure stdlib; eliminates supply-chain risk in the monitor itself |
-| 10 | Cross-platform (Windows/Linux/macOS) | YES | Verified on Python 3.9–3.13 |
+| 10 | Cross-platform (Windows/Linux/macOS) | CI TARGET | CI is configured for multiple Python versions/platforms; re-run Actions before citing verified matrix status |
 
 ---
 
@@ -260,8 +260,8 @@ every email sent through the server.
    attack was specifically about a tool changing behavior between versions.
    Detecting "new fields that never existed before" is a good signal.
 
-5. **313 tests with 100% coverage shows engineering discipline.** This is
-   production-quality testing rigor.
+5. **The prior test snapshot shows engineering discipline if reproduced.** The
+   stale 313-test/100%-coverage claim should be re-run before being cited as current.
 
 ### What This Project Gets Wrong (Or Oversells)
 
@@ -329,10 +329,9 @@ every email sent through the server.
 
 ### What This Is
 
-A well-engineered, thoroughly-tested **detection framework** that provides the
-security monitoring layer that the MCP protocol itself lacks. It is the most
-comprehensive open-source MCP security monitor available as a Python library
-with zero dependencies.
+A well-engineered **detection framework** that provides part of the security
+monitoring layer that the MCP protocol itself lacks. It is an open-source Python
+library with a stdlib-only core and a broad set of MCP monitoring components.
 
 ### What This Is Not
 
@@ -370,6 +369,6 @@ is: **No. Nothing does. Defense is depth, not a single product.**
 
 ---
 
-*Report prepared with full access to source code, test results, and external
-research. No claims in this document are intentionally misleading. Limitations
-are documented alongside capabilities.*
+*Report prepared from repository evidence and cited research notes. Re-run tests,
+coverage, and repository metrics before treating numeric claims as current.
+Limitations are documented alongside capabilities.*

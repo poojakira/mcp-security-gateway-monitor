@@ -4,9 +4,9 @@ A real-time security monitor that protects AI tool calls (MCP protocol) from pro
 
 ## What This Project Does (Plain English)
 
-When AI assistants use external tools (email, file access, APIs), those tools can be hijacked. In mid-2026, an MCP server silently added a hidden BCC to every outgoing email, forwarding copies to an attacker. This project stops that.
+When AI assistants use external tools (email, file access, APIs), those tools can be hijacked. In mid-2026, an MCP server silently added a hidden BCC to outgoing email, forwarding copies to an attacker. This project adds monitoring and blocking controls for visible tool-call and egress signals, but it does not guarantee complete prevention.
 
-**MCP Security Gateway Monitor** sits between the AI and its tools. Every tool call passes through up to 10 defense layers that inspect, analyze, and block suspicious activity before it reaches the outside world. Think of it as a firewall specifically designed for AI-to-tool communication.
+**MCP Security Gateway Monitor** is designed to sit between the AI and its tools. In the configured proxy path, tool calls can be routed through up to 10 defense layers that inspect, analyze, and block suspicious activity before it reaches the outside world. Think of it as a firewall specifically designed for AI-to-tool communication.
 
 It will:
 - Block prompt injection hidden inside tool arguments
@@ -44,7 +44,7 @@ python3 -m pip install -e ".[dev]"
 # 4. Run all tests
 python3 -m pytest tests/ -v
 
-# 5. Run with coverage (must be 100%)
+# 5. Run with coverage
 python3 -m pytest tests/ --cov=mcp_monitor --cov-report=term-missing
 
 # 6. Run the security dashboard
@@ -70,7 +70,7 @@ python -m pip install -e ".[dev]"
 # 4. Run all tests
 python -m pytest tests/ -v
 
-# 5. Run with coverage (must be 100%)
+# 5. Run with coverage
 python -m pytest tests/ --cov=mcp_monitor --cov-report=term-missing
 
 # 6. Run the security dashboard
@@ -97,7 +97,7 @@ python -m pip install -e .[dev]
 REM 4. Run all tests
 python -m pytest tests/ -v
 
-REM 5. Run with coverage (must be 100%)
+REM 5. Run with coverage
 python -m pytest tests/ --cov=mcp_monitor --cov-report=term-missing
 
 REM 6. Run the security dashboard
@@ -114,7 +114,7 @@ This project implements a defense-in-depth architecture with 10 layers that work
 
 | Layer | Name | What It Does |
 |-------|------|--------------|
-| 1 | **Audit Log** | Records every tool call in a SHA-256 hash-chained immutable log. Tampering is instantly detectable. |
+| 1 | **Audit Log** | Records tool calls in a SHA-256 hash-chained log. Tampering can be detected when the chain is verified. |
 | 2 | **Inline Proxy Gateway** | Intercepts all tool calls. Applies rules, risk scoring, and blocks/quarantines suspicious calls before they execute. |
 | 3 | **Kernel Monitor** | Watches syscall-level behavior: network connections, DNS lookups, file access, process spawning. Enforces per-server policies. |
 | 4 | **Semantic Intent Analyzer** | Understands what a tool call is trying to do. Detects BCC synonyms, exfiltration patterns, encoded emails, and suspicious fields. |
@@ -122,7 +122,7 @@ This project implements a defense-in-depth architecture with 10 layers that work
 | 6 | **ML Threat Classifier** *(BETA)* | Experimental scikit-learn model (TF-IDF char n-grams + LogisticRegression) trained on a built-in synthetic corpus. Supplementary signal only — see the BETA note below for measured held-out performance. |
 | 7 | **Rate Limiter** | Limits blast radius by enforcing recipient whitelists and per-minute rate caps. Stops mass-exfiltration. |
 | 8 | **Honeypot Vault** | Plants canary tokens in tool responses. If a token appears somewhere it should not, an exfiltration path is confirmed. |
-| 9 | **Docker Sandbox** | Isolates untrusted MCP servers in network-restricted containers. Even if compromised, they cannot reach the internet. |
+| 9 | **Docker Sandbox** | Isolates untrusted MCP servers in network-restricted containers. Internet access is limited by the configured container policy and should be verified in deployment. |
 | 10 | **Network Monitor + DPI** | Deep packet inspection comparing declared MCP intent against actual HTTP traffic. Catches tools that lie about what they send. |
 
 The first 5 layers run on every tool call with zero external dependencies. Layers 6-10 add ML, sandboxing, and deep inspection for production deployments.
@@ -208,7 +208,7 @@ python run_dashboard.py
 
 This script:
 1. Sets up a 5-layer defense with InlineProxyGateway, KernelMonitor, SemanticIntentAnalyzer, and NetworkEgressPolicy
-2. Runs the full red-team attack catalog (all known attack patterns)
+2. Runs the bundled red-team attack catalog
 3. Prints a color-coded terminal report showing each attack and whether it was blocked
 4. Saves an interactive HTML dashboard to `security_dashboard.html`
 5. Opens the dashboard in your default browser
@@ -260,10 +260,10 @@ print(f"Blocked: {report.blocked}/{report.total_attacks}")
 ## Test Results
 
 ```
-963 statements | 0 missed | 100% code coverage
-234 tests | 0 failures | ~0.5s runtime
-Verified on: Python 3.9, 3.10, 3.11, 3.12, 3.13
-Platforms:   Ubuntu Linux, Windows, macOS
+Current local validation snapshot (Windows, Python 3.12.9, 2026-07-14):
+462 tests passed | 1 warning | 39.36s runtime
+
+Coverage and cross-platform status were not re-run in this snapshot; run the commands above before citing those numbers.
 ```
 
 ---
