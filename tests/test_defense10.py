@@ -14,14 +14,15 @@ from mcp_monitor.defense10 import (
 )
 
 
+@pytest.fixture(scope="module")
+def clf():
+    c = MLThreatClassifier()
+    c.train()
+    return c
+
+
 # --- ML Classifier ---
 class TestMLClassifier:
-    @pytest.fixture(scope="class")
-    def clf(self):
-        c = MLThreatClassifier()
-        c.train()
-        return c
-
     def test_trains(self, clf):
         assert clf.is_trained
 
