@@ -68,6 +68,13 @@ class TestDockerfile:
         content = Path(ROOT, "Dockerfile").read_text(encoding="utf-8")
         assert "pytest" in content
 
+    def test_runtime_consumes_builder_artifact(self):
+        ## Runtime must install the wheel produced by the tested builder stage.
+        content = Path(ROOT, "Dockerfile").read_text(encoding="utf-8")
+        assert "COPY --from=builder /wheels /wheels" in content
+        assert "pip wheel" in content
+        assert "pip install --no-cache-dir /wheels/*.whl" in content
+
 
 class TestDockerCompose:
     """Validate docker-compose.yml structure."""
@@ -223,10 +230,10 @@ class TestKubernetesDeployment:
         assert data["apiVersion"] == "apps/v1"
 
     def test_replicas(self):
-        """Must have 2 replicas."""
+        """Must use one replica with the file-backed WAL PVC."""
         with open(os.path.join(K8S_DIR, "deployment.yaml")) as f:
             data = yaml.safe_load(f)
-        assert data["spec"]["replicas"] == 2
+        assert data["spec"]["replicas"] == 1
 
     def test_resource_limits(self):
         """Container must have resource limits."""
@@ -265,6 +272,62 @@ class TestKubernetesDeployment:
             e["configMapRef"]["name"] for e in env_from if "configMapRef" in e
         ]
         assert "mcp-monitor-config" in config_ref_names
+
+    def test_api_key_from_secret(self):
+        """Protected routes require MCP_API_KEY from a Kubernetes Secret."""
+        with open(os.path.join(K8S_DIR, "deployment.yaml")) as f:
+            data = yaml.safe_load(f)
+        container = data["spec"]["template"]["spec"]["containers"][0]
+        env = {item["name"]: item for item in container["env"]}
+        secret_ref = env["MCP_API_KEY"]["valueFrom"]["secretKeyRef"]
+        assert secret_ref["name"] == "mcp-monitor-secrets"
+        assert secret_ref["key"] == "MCP_API_KEY"
+
+    def test_data_volume_uses_persistent_volume_claim(self):
+        """WAL/audit /data must not use ephemeral emptyDir storage."""
+        with open(os.path.join(K8S_DIR, "deployment.yaml")) as f:
+            data = yaml.safe_load(f)
+        volumes = {v["name"]: v for v in data["spec"]["template"]["spec"]["volumes"]}
+        assert (
+            volumes["wal-data"]["persistentVolumeClaim"]["claimName"]
+            == "mcp-monitor-data"
+        )
+        mounts = data["spec"]["template"]["spec"]["containers"][0]["volumeMounts"]
+        data_mount = next(m for m in mounts if m["name"] == "wal-data")
+        assert data_mount["mountPath"] == "/data"
+
+    def test_container_security_context(self):
+        """Container must run with reduced privileges."""
+        with open(os.path.join(K8S_DIR, "deployment.yaml")) as f:
+            data = yaml.safe_load(f)
+        container = data["spec"]["template"]["spec"]["containers"][0]
+        security_context = container["securityContext"]
+        assert security_context["allowPrivilegeEscalation"] is False
+        assert security_context["readOnlyRootFilesystem"] is True
+        assert "ALL" in security_context["capabilities"]["drop"]
+
+    def test_image_requires_registry_replacement_before_cluster_apply(self):
+        ## The sample image tag must be explicitly documented as local-only.
+        with open(os.path.join(K8S_DIR, "deployment.yaml")) as f:
+            data = yaml.safe_load(f)
+        container = data["spec"]["template"]["spec"]["containers"][0]
+        assert container["image"] == "mcp-monitor:0.1.0"
+        assert container["imagePullPolicy"] == "IfNotPresent"
+        with open(os.path.join(K8S_DIR, "README.md")) as f:
+            runbook = f.read()
+        assert "update `image:` in `deployment.yaml`" in runbook
+
+
+class TestKubernetesSecretExample:
+    ## Validate secret.example.yaml is safe documentation, not a real Secret.
+
+    def test_example_secret_is_not_applyable_secret(self):
+        with open(os.path.join(K8S_DIR, "secret.example.yaml")) as f:
+            data = yaml.safe_load(f)
+        assert data["kind"] == "SecretTemplate"
+        assert data["apiVersion"] == "docs.example/v1"
+        assert data["requiredKeys"] == ["MCP_API_KEY"]
+        assert "stringData" not in data
 
 
 class TestKubernetesService:
@@ -327,16 +390,16 @@ class TestKubernetesHPA:
         assert data["apiVersion"] == "autoscaling/v2"
 
     def test_min_replicas(self):
-        """HPA must have minReplicas: 2."""
+        """HPA must keep one replica for the single-writer WAL PVC."""
         with open(os.path.join(K8S_DIR, "hpa.yaml")) as f:
             data = yaml.safe_load(f)
-        assert data["spec"]["minReplicas"] == 2
+        assert data["spec"]["minReplicas"] == 1
 
     def test_max_replicas(self):
-        """HPA must have maxReplicas: 10."""
+        """HPA must not scale the single-writer WAL PVC deployment."""
         with open(os.path.join(K8S_DIR, "hpa.yaml")) as f:
             data = yaml.safe_load(f)
-        assert data["spec"]["maxReplicas"] == 10
+        assert data["spec"]["maxReplicas"] == 1
 
     def test_cpu_target_utilization(self):
         """HPA must target 70% CPU utilization."""

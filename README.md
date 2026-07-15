@@ -129,14 +129,11 @@ The first 5 layers run on every tool call with zero external dependencies. Layer
 
 > **⚠️ ML Threat Classifier (Layer 6) is BETA.** Its `train()` reports a
 > cross-validation accuracy (~0.98) measured on its own built-in *synthetic*
-> corpus. That is a sanity figure, **not** production accuracy. On a real
-> external held-out benchmark (Hugging Face `deepset/prompt-injections`) the
-> BETA classifier measured **recall ≈ 0.317** with a **false-positive rate
-> ≈ 14.3%** on benign text. For reference, the rule-based regex
-> prompt-injection detector measured **recall ≈ 0.083 / 0% false positives**
-> on the same test. Use Layer 6 as a supplementary signal behind the
-> deterministic layers (1-5), not as a standalone defense. The detectors are
-> intentionally not tuned to any single benchmark.
+> corpus. That is a sanity figure, **not** production accuracy. The current
+> repository tests assert only synthetic-fixture regression behavior; no public
+> external benchmark artifact is shipped in this repo. Use Layer 6 as a
+> supplementary signal behind the deterministic layers (1-5), not as a
+> standalone defense.
 
 ---
 
@@ -249,7 +246,7 @@ print(f"Blocked: {report.blocked}/{report.total_attacks}")
 | `ERROR: .[dev] is not a valid requirement` | Using cmd.exe with quotes | Remove quotes: `pip install -e .[dev]` |
 | `python3: command not found` (Windows) | Windows uses `python` not `python3` | Use `python` instead of `python3` |
 | `Permission denied` on Linux/macOS | Need write access to install | Use a virtual environment: `python3 -m venv .venv && source .venv/bin/activate` |
-| `SyntaxError` on Python 3.8 or older | Project requires Python 3.9+ | Upgrade Python to 3.9 or later |
+| `SyntaxError` on Python 3.9 or older | Project requires Python 3.10+ | Upgrade Python to 3.10 or later |
 | `ImportError: cannot import name 'MLThreatClassifier'` | scikit-learn not installed | Run `pip install -e ".[ml]"` for ML features |
 | Tests show `0% coverage` | Running pytest from wrong directory | Make sure you are in the project root directory |
 | `webbrowser.open` does nothing | No GUI browser in headless environment | Open `security_dashboard.html` manually in a browser |
@@ -261,9 +258,10 @@ print(f"Blocked: {report.blocked}/{report.total_attacks}")
 
 ```
 Current local validation snapshot (Windows, Python 3.12.9, 2026-07-14):
-462 tests passed | 1 warning | 39.36s runtime
+472 tests passed | 0 pytest warnings | 23.66s runtime with `-W error`
+472 tests passed | 82% total coverage | 43.64s runtime with coverage
 
-Coverage and cross-platform status were not re-run in this snapshot; run the commands above before citing those numbers.
+Docker image build validated locally with `docker build -t mcp-monitor:ci .`.
 ```
 
 ---
@@ -278,7 +276,7 @@ dependencies = []  # Zero runtime deps
 ```
 
 Optional extras for advanced features:
-- `pip install -e ".[dev]"` -- pytest and coverage
+- `pip install -e ".[dev]"` -- pytest, coverage, PyYAML, and scikit-learn for local validation
 - `pip install -e ".[ml]"` -- scikit-learn for the ML classifier (Layer 6)
 - `pip install -e ".[dpi]"` -- mitmproxy for deep packet inspection (Layer 10)
 

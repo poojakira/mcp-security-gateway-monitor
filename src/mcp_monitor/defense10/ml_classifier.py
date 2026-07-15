@@ -12,18 +12,12 @@ and persists to disk (with a SHA-256 integrity check on load).
 Character n-grams matter: "b c c", "b.c.c", "ᖯcc" all share n-gram structure
 with "bcc" that word-level matching misses.
 
-MEASURED PERFORMANCE (honest, held-out):
+MEASURED PERFORMANCE:
 The ``cv_accuracy`` reported by ``train()`` (~0.98) is cross-validation on the
 model's OWN synthetic training corpus. It is a fixture / sanity figure and
-does NOT represent production accuracy. On a real external held-out benchmark
-(Hugging Face ``deepset/prompt-injections``) this BETA classifier measured
-**recall ≈ 0.317** with a **false-positive rate ≈ 14.3%** on benign text.
-Treat those held-out numbers — not the CV figure — as the realistic
-expectation. (For reference, the public-by-design regex prompt-injection
-detector measured recall ≈ 0.083 / 0% FP on the same test.)
-
-These figures are reported for transparency. Do not tune the detectors to any
-single benchmark.
+does NOT represent production accuracy. This repository does not ship a
+reproducible public external benchmark artifact for Layer 6, so external recall
+and false-positive rates are intentionally not claimed here.
 """
 
 from __future__ import annotations
@@ -151,10 +145,9 @@ class MLThreatClassifier:
 
     BETA — experimental. The ~0.98 ``cv_accuracy`` returned by :meth:`train`
     is cross-validation on the synthetic training corpus and is NOT production
-    accuracy. On the real held-out ``deepset/prompt-injections`` benchmark this
-    classifier measured recall ≈ 0.317 / false-positive rate ≈ 14.3%. Use it as
-    a supplementary signal behind the deterministic rule-based layers, not as a
-    standalone defense.
+    accuracy. This repository does not ship a reproducible public external
+    benchmark artifact for Layer 6, so use it as a supplementary signal behind
+    the deterministic rule-based layers, not as a standalone defense.
     """
 
     def __init__(
@@ -231,10 +224,8 @@ class MLThreatClassifier:
         self._pipeline.fit(X, y)
         self._trained = True
 
-        # Cross-validation score on the synthetic TRAINING corpus only.
-        # This is a sanity/fixture figure — NOT production accuracy. Measured
-        # held-out performance on deepset/prompt-injections is recall ~0.317 /
-        # FP ~14.3%. See module docstring.
+        ## Cross-validation score on the synthetic TRAINING corpus only.
+        ## This is a sanity/fixture figure, not production accuracy.
         try:
             scores = cross_val_score(
                 self._pipeline, X, y, cv=min(5, len(mal), len(ben))

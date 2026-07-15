@@ -1,3 +1,30 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mcp-security-gateway-monitor"
+version = "0.1.0"
+description = "Stdlib-first MCP tool-call security monitor and gateway"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "Pooja Kiran" }]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2",
+    "pytest-cov>=5.0",
+    "PyYAML>=6.0",
+    "scikit-learn>=1.4",
+]
+ml = ["scikit-learn>=1.4"]
+dpi = ["mitmproxy>=10"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = ["-p", "no:asyncio"]

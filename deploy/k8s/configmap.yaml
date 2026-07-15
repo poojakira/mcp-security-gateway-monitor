@@ -15,8 +15,7 @@ data:
   MCP_LOG_LEVEL: "INFO"
   MCP_ALLOWED_SERVERS: ""
   MCP_MAX_PAYLOAD_KB: "512"
-  # WAL uses per-pod emptyDir (ephemeral scratch space for write-ahead log).
-  # Audit data flows through structured JSON logs to stdout and is collected
-  # by a cluster-level log aggregator (Fluentd, Datadog Agent, etc.).
+  # WAL and audit files are written to the mcp-monitor-data PVC in the sample deployment.
+  # For horizontal scaling, use an external audit/WAL backend or per-pod PVC StatefulSet.
   MCP_WAL_PATH: "/data/mcp_monitor_wal.jsonl"
   MCP_AUDIT_PATH: "/data/mcp_monitor_audit.jsonl"

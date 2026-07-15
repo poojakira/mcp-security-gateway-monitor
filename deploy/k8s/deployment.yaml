@@ -6,7 +6,7 @@ metadata:
   labels:
     app.kubernetes.io/name: mcp-monitor
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: mcp-monitor
@@ -15,10 +15,17 @@ spec:
       labels:
         app.kubernetes.io/name: mcp-monitor
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: mcp-monitor
-          # Replace with your registry/tag, e.g. ghcr.io/org/mcp-monitor:v1.0.0
-          image: mcp-monitor:latest
+          # Build and push this tag to your registry before applying.
+          image: mcp-monitor:0.1.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
@@ -26,6 +33,12 @@ spec:
           envFrom:
             - configMapRef:
                 name: mcp-monitor-config
+          env:
+            - name: MCP_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: mcp-monitor-secrets
+                  key: MCP_API_KEY
           resources:
             requests:
               memory: "128Mi"
@@ -33,6 +46,11 @@ spec:
             limits:
               memory: "256Mi"
               cpu: "500m"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           livenessProbe:
             httpGet:
               path: /v1/health
@@ -52,10 +70,12 @@ spec:
           volumeMounts:
             - name: wal-data
               mountPath: /data
+            - name: tmp
+              mountPath: /tmp
       volumes:
-        # WAL is ephemeral per-pod scratch space. Audit data flows through
-        # structured JSON logs to stdout, collected by a log aggregator
-        # (e.g., Fluentd, Datadog Agent). No shared PVC needed.
         - name: wal-data
+          persistentVolumeClaim:
+            claimName: mcp-monitor-data
+        - name: tmp
           emptyDir: {}
       terminationGracePeriodSeconds: 30
