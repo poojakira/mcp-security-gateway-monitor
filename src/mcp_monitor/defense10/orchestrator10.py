@@ -88,17 +88,26 @@ class Defense10:
         # L9: honeypot — did the call try to exfiltrate a canary?
         trips = self.honeypot.scan_tool_call(tool_call)
         if trips:
-            return self._block(call_id, "L9_honeypot",
-                               [f"canary token exfiltrated: {t.token_id}" for t in trips], 100, passed)
+            return self._block(
+                call_id,
+                "L9_honeypot",
+                [f"canary token exfiltrated: {t.token_id}" for t in trips],
+                100,
+                passed,
+            )
         passed.append("L9_honeypot")
 
         # L4: ML classifier (opaque to adversary) — graceful degradation
         if self._ml_available:
             pred = self.ml.classify(tool_call)
             if pred.is_threat:
-                return self._block(call_id, "L4_ml_classifier",
-                                   [f"ML threat conf={pred.confidence} family={pred.threat_family}"],
-                                   int(pred.confidence * 100), passed)
+                return self._block(
+                    call_id,
+                    "L4_ml_classifier",
+                    [f"ML threat conf={pred.confidence} family={pred.threat_family}"],
+                    int(pred.confidence * 100),
+                    passed,
+                )
         passed.append("L4_ml_classifier")
 
         # L8: recipient whitelist
@@ -106,7 +115,9 @@ class Defense10:
         if recipients:
             wl = self.whitelist.check(server_id, recipients)
             if not wl.allowed:
-                return self._block(call_id, "L8_recipient_whitelist", [wl.reason], 90, passed)
+                return self._block(
+                    call_id, "L8_recipient_whitelist", [wl.reason], 90, passed
+                )
         passed.append("L8_recipient_whitelist")
 
         # L7: rate limit (only for send-like actions)
@@ -123,8 +134,9 @@ class Defense10:
         This is the layer that catches server-side BCC injection."""
         v = self.egress.inspect(call_id, actual_payload)
         if not v.allowed:
-            return self._block(call_id, "L6_dpi_egress",
-                               [v.reason], v.severity, ["L6_dpi_egress"])
+            return self._block(
+                call_id, "L6_dpi_egress", [v.reason], v.severity, ["L6_dpi_egress"]
+            )
         return self._allow(call_id, ["L6_dpi_egress"])
 
     def scan_network(self) -> Verdict10:
@@ -133,9 +145,13 @@ class Defense10:
         alerts = self.network.scan()
         if alerts:
             top = max(alerts, key=lambda a: a.severity)
-            return self._block(call_id, "L3_network_monitor",
-                               [f"{a.reason} -> {a.remote_addr}:{a.remote_port}" for a in alerts[:3]],
-                               top.severity, [])
+            return self._block(
+                call_id,
+                "L3_network_monitor",
+                [f"{a.reason} -> {a.remote_addr}:{a.remote_port}" for a in alerts[:3]],
+                top.severity,
+                [],
+            )
         return self._allow(call_id, ["L3_network_monitor"])
 
     def get_verdicts(self) -> list[Verdict10]:
@@ -149,7 +165,9 @@ class Defense10:
             if v.blocked_by:
                 by_layer[v.blocked_by] = by_layer.get(v.blocked_by, 0) + 1
         return {
-            "total": total, "blocked": blocked, "allowed": total - blocked,
+            "total": total,
+            "blocked": blocked,
+            "allowed": total - blocked,
             "block_rate": round(blocked / max(total, 1) * 100, 1),
             "blocks_by_layer": by_layer,
             "honeypot_tokens": self.honeypot.token_count(),
@@ -165,6 +183,7 @@ class Defense10:
         Any email to an unapproved domain — in any field — is blocked.
         """
         import re
+
         rx = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
 
         def walk(obj: Any) -> list[str]:
@@ -182,8 +201,14 @@ class Defense10:
         return walk(args)
 
     def _block(self, call_id, layer, reasons, severity, passed) -> Verdict10:
-        v = Verdict10(call_id=call_id, allowed=False, blocked_by=layer,
-                      reasons=reasons, layers_passed=passed, severity=severity)
+        v = Verdict10(
+            call_id=call_id,
+            allowed=False,
+            blocked_by=layer,
+            reasons=reasons,
+            layers_passed=passed,
+            severity=severity,
+        )
         self._verdicts.append(v)
         return v
 
@@ -192,5 +217,5 @@ class Defense10:
         self._verdicts.append(v)
         # Evict old verdicts to prevent memory exhaustion
         if len(self._verdicts) > self._max_verdicts:
-            self._verdicts = self._verdicts[-self._max_verdicts:]
+            self._verdicts = self._verdicts[-self._max_verdicts :]
         return v

@@ -37,15 +37,15 @@ from typing import Any
 @dataclass
 class MLPrediction:
     """Result of an ML threat classification."""
+
     is_threat: bool
-    confidence: float          # 0.0 - 1.0 probability of being malicious
-    threat_family: str = ""    # predicted attack family
+    confidence: float  # 0.0 - 1.0 probability of being malicious
+    threat_family: str = ""  # predicted attack family
     features_flagged: list[str] = None
 
     def __post_init__(self) -> None:
         if self.features_flagged is None:
             self.features_flagged = []
-
 
 
 # ---------------------------------------------------------------------------
@@ -142,7 +142,6 @@ _THREAT_FAMILIES = {
 }
 
 
-
 class MLThreatClassifier:
     """scikit-learn threat classifier for MCP tool calls (BETA).
 
@@ -158,7 +157,9 @@ class MLThreatClassifier:
     standalone defense.
     """
 
-    def __init__(self, *, model_path: str | None = None, threshold: float = 0.6) -> None:
+    def __init__(
+        self, *, model_path: str | None = None, threshold: float = 0.6
+    ) -> None:
         self._model_path = model_path
         self._threshold = threshold
         self._pipeline = None
@@ -182,6 +183,7 @@ class MLThreatClassifier:
         else:
             # Large generated dataset + curated seed samples
             from mcp_monitor.defense10.dataset import generate
+
             gen_mal, gen_ben = generate(n_per_family=60)
             mal = _MALICIOUS_SAMPLES + gen_mal
             self._gen_ben = gen_ben
@@ -195,18 +197,37 @@ class MLThreatClassifier:
 
         # Hybrid features: char n-grams (catch obfuscation) UNION structural
         # behavioral features (generalize to unseen attack structures).
-        self._pipeline = Pipeline([
-            ("features", FeatureUnion([
-                ("ngram", TfidfVectorizer(
-                    analyzer="char_wb", ngram_range=(2, 4),
-                    lowercase=True, min_df=2, max_features=3000,
-                )),
-                ("structural", StructuralFeatures()),
-            ])),
-            ("clf", LogisticRegression(
-                max_iter=2000, C=1.0, class_weight="balanced", random_state=42,
-            )),
-        ])
+        self._pipeline = Pipeline(
+            [
+                (
+                    "features",
+                    FeatureUnion(
+                        [
+                            (
+                                "ngram",
+                                TfidfVectorizer(
+                                    analyzer="char_wb",
+                                    ngram_range=(2, 4),
+                                    lowercase=True,
+                                    min_df=2,
+                                    max_features=3000,
+                                ),
+                            ),
+                            ("structural", StructuralFeatures()),
+                        ]
+                    ),
+                ),
+                (
+                    "clf",
+                    LogisticRegression(
+                        max_iter=2000,
+                        C=1.0,
+                        class_weight="balanced",
+                        random_state=42,
+                    ),
+                ),
+            ]
+        )
         self._pipeline.fit(X, y)
         self._trained = True
 
@@ -215,7 +236,9 @@ class MLThreatClassifier:
         # held-out performance on deepset/prompt-injections is recall ~0.317 /
         # FP ~14.3%. See module docstring.
         try:
-            scores = cross_val_score(self._pipeline, X, y, cv=min(5, len(mal), len(ben)))
+            scores = cross_val_score(
+                self._pipeline, X, y, cv=min(5, len(mal), len(ben))
+            )
             cv_mean = float(np.mean(scores))
         except Exception:
             cv_mean = float("nan")
@@ -230,8 +253,10 @@ class MLThreatClassifier:
             "cv_accuracy": round(cv_mean, 4),
             "n_features": len(
                 self._pipeline.named_steps["features"]
-                .transformer_list[0][1].vocabulary_
-            ) + len(StructuralFeatures.FEATURE_NAMES),
+                .transformer_list[0][1]
+                .vocabulary_
+            )
+            + len(StructuralFeatures.FEATURE_NAMES),
         }
 
     def classify(self, tool_call: dict[str, Any]) -> MLPrediction:
@@ -265,6 +290,7 @@ class MLThreatClassifier:
         """Persist the trained model to disk with integrity verification."""
         import pickle
         import hashlib as _hl
+
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         data = pickle.dumps(self._pipeline)
         integrity = _hl.sha256(data).hexdigest()
@@ -281,6 +307,7 @@ class MLThreatClassifier:
         """
         import pickle
         import hashlib as _hl
+
         if not os.path.exists(path):
             return False
         checksum_path = path + ".sha256"
@@ -300,7 +327,6 @@ class MLThreatClassifier:
     @property
     def is_trained(self) -> bool:
         return self._trained
-
 
 
 # ---------------------------------------------------------------------------

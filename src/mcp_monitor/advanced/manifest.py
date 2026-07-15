@@ -23,7 +23,7 @@ import hashlib
 import hmac
 import json
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from typing import Any
 
 
@@ -130,14 +130,24 @@ class ManifestVerifier:
 
         if live_manifest.parameters != baseline.parameters:
             # Identify specific changes
-            added = set(live_manifest.parameters.keys()) - set(baseline.parameters.keys())
-            removed = set(baseline.parameters.keys()) - set(live_manifest.parameters.keys())
+            added = set(live_manifest.parameters.keys()) - set(
+                baseline.parameters.keys()
+            )
+            removed = set(baseline.parameters.keys()) - set(
+                live_manifest.parameters.keys()
+            )
             if added:
-                violations.append(f"schema_drift:params_added:{','.join(sorted(added))}")
+                violations.append(
+                    f"schema_drift:params_added:{','.join(sorted(added))}"
+                )
             if removed:
-                violations.append(f"schema_drift:params_removed:{','.join(sorted(removed))}")
+                violations.append(
+                    f"schema_drift:params_removed:{','.join(sorted(removed))}"
+                )
             # Check modified params
-            for param in set(live_manifest.parameters.keys()) & set(baseline.parameters.keys()):
+            for param in set(live_manifest.parameters.keys()) & set(
+                baseline.parameters.keys()
+            ):
                 if live_manifest.parameters[param] != baseline.parameters[param]:
                     violations.append(f"schema_drift:param_modified:{param}")
 

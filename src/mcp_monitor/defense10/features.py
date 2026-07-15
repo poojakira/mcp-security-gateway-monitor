@@ -25,26 +25,59 @@ _IP_URL = re.compile(r"https?://\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}")
 _BASE64 = re.compile(r"[A-Za-z0-9+/]{16,}={0,2}")
 _SHELL_META = re.compile(r"[;&|`]|\$\(")
 _SUSPICIOUS_TLD = re.compile(r"\.(club|tk|ml|ga|cf|gq|xyz|top|buzz|onion)\b")
-_SECRET_WORDS = re.compile(r"\b(secret|password|api[_ ]?key|token|credential|ssh|private[_ ]?key|vault)s?\b", re.I)
-_EXFIL_VERBS = re.compile(r"\b(send|leak|dump|exfiltrate|forward|upload|wire|transmit|copy|mirror|redirect)\b", re.I)
-_INJECT_WORDS = re.compile(r"\b(ignore|disregard|override|bypass|forget|overlook|supersede)\b", re.I)
-_SQL_DANGER = re.compile(r"\b(drop\s+table|delete\s+from|union\s+select|or\s+1=1|;--)\b", re.I)
-_CORP_HINT = re.compile(r"\b(meeting|invoice|report|standup|lunch|calendar|review|thanks|rsvp|agenda)\b", re.I)
+_SECRET_WORDS = re.compile(
+    r"\b(secret|password|api[_ ]?key|token|credential|ssh|private[_ ]?key|vault)s?\b",
+    re.I,
+)
+_EXFIL_VERBS = re.compile(
+    r"\b(send|leak|dump|exfiltrate|forward|upload|wire|transmit|copy|mirror|redirect)\b",
+    re.I,
+)
+_INJECT_WORDS = re.compile(
+    r"\b(ignore|disregard|override|bypass|forget|overlook|supersede)\b", re.I
+)
+_SQL_DANGER = re.compile(
+    r"\b(drop\s+table|delete\s+from|union\s+select|or\s+1=1|;--)\b", re.I
+)
+_CORP_HINT = re.compile(
+    r"\b(meeting|invoice|report|standup|lunch|calendar|review|thanks|rsvp|agenda)\b",
+    re.I,
+)
 
 
 class StructuralFeatures(BaseEstimator, TransformerMixin):
     """Transforms raw tool-call text into a fixed vector of behavioral signals."""
 
     FEATURE_NAMES = [
-        "n_emails", "n_nonstandard_domain_emails", "has_suspicious_tld",
-        "has_ip_url", "has_base64_blob", "has_shell_meta", "has_sql_danger",
-        "secret_word_count", "exfil_verb_count", "inject_word_count",
-        "exfil_verb_near_secret", "corp_hint_count", "text_len",
+        "n_emails",
+        "n_nonstandard_domain_emails",
+        "has_suspicious_tld",
+        "has_ip_url",
+        "has_base64_blob",
+        "has_shell_meta",
+        "has_sql_danger",
+        "secret_word_count",
+        "exfil_verb_count",
+        "inject_word_count",
+        "exfil_verb_near_secret",
+        "corp_hint_count",
+        "text_len",
     ]
 
-    _KNOWN_GOOD = {"company.com", "corp.com", "business.org", "acme.co", "team.io",
-                   "github.com", "api.github.com", "postmarkapp.com", "api.postmarkapp.com",
-                   "stripe.com", "api.stripe.com", "slack.com"}
+    _KNOWN_GOOD = {
+        "company.com",
+        "corp.com",
+        "business.org",
+        "acme.co",
+        "team.io",
+        "github.com",
+        "api.github.com",
+        "postmarkapp.com",
+        "api.postmarkapp.com",
+        "stripe.com",
+        "api.stripe.com",
+        "slack.com",
+    }
 
     def fit(self, X, y=None):
         return self
@@ -55,14 +88,18 @@ class StructuralFeatures(BaseEstimator, TransformerMixin):
 
     def _vec(self, text: str) -> list[float]:
         emails = _EMAIL.findall(text)
-        nonstd = sum(1 for d in emails if d.lower() not in self._KNOWN_GOOD
-                     and not any(d.lower().endswith(g) for g in self._KNOWN_GOOD))
+        nonstd = sum(
+            1
+            for d in emails
+            if d.lower() not in self._KNOWN_GOOD
+            and not any(d.lower().endswith(g) for g in self._KNOWN_GOOD)
+        )
         secret_ct = len(_SECRET_WORDS.findall(text))
         exfil_ct = len(_EXFIL_VERBS.findall(text))
         # exfil verb within 40 chars of a secret word = strong exfil signal
         near = 0
         for m in _SECRET_WORDS.finditer(text):
-            window = text[max(0, m.start() - 40): m.end() + 40]
+            window = text[max(0, m.start() - 40) : m.end() + 40]
             if _EXFIL_VERBS.search(window):
                 near = 1
                 break

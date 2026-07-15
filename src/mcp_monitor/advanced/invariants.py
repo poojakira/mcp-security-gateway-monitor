@@ -20,22 +20,22 @@ WHAT THIS MODULE DOES:
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable
 
 
-
 class InvariantType(Enum):
     """Types of security invariants."""
-    FIELD_ABSENT = "field_absent"        # Field must NOT exist
-    FIELD_PRESENT = "field_present"      # Field MUST exist
-    VALUE_MATCHES = "value_matches"      # Field value matches regex
+
+    FIELD_ABSENT = "field_absent"  # Field must NOT exist
+    FIELD_PRESENT = "field_present"  # Field MUST exist
+    VALUE_MATCHES = "value_matches"  # Field value matches regex
     VALUE_NOT_MATCHES = "value_not_matches"  # Field value must NOT match
-    VALUE_IN_SET = "value_in_set"        # Field value in allowed set
+    VALUE_IN_SET = "value_in_set"  # Field value in allowed set
     VALUE_NOT_IN_SET = "value_not_in_set"  # Field value NOT in blocked set
-    MAX_LENGTH = "max_length"            # String field max length
-    CUSTOM = "custom"                    # Custom predicate function
+    MAX_LENGTH = "max_length"  # String field max length
+    CUSTOM = "custom"  # Custom predicate function
 
 
 @dataclass
@@ -46,10 +46,10 @@ class Invariant:
     description: str
     invariant_type: InvariantType
     tool_pattern: str = ".*"  # Regex matching tool names this applies to
-    field_path: str = ""      # Dot-notation path into arguments/output
-    value: Any = None         # Expected value, regex pattern, set, or max length
+    field_path: str = ""  # Dot-notation path into arguments/output
+    value: Any = None  # Expected value, regex pattern, set, or max length
     predicate: Callable[[dict], bool] | None = None  # For CUSTOM type
-    severity: int = 80        # How critical is a violation (0-100)
+    severity: int = 80  # How critical is a violation (0-100)
     applies_to: str = "arguments"  # "arguments" or "output" or "both"
 
 
@@ -117,7 +117,6 @@ BUILTIN_INVARIANTS: list[Invariant] = [
         applies_to="arguments",
     ),
 ]
-
 
 
 class InvariantEnforcer:
@@ -312,6 +311,7 @@ class InvariantEnforcer:
 
 class _MissingSentinel:
     """Sentinel for 'field does not exist'."""
+
     pass
 
 

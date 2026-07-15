@@ -7,7 +7,6 @@ from mcp_monitor.advanced.invariants import (
     Invariant,
     InvariantEnforcer,
     InvariantType,
-    InvariantViolation,
 )
 
 
@@ -74,57 +73,65 @@ class TestBuiltinInvariants:
 
 class TestCustomInvariants:
     def test_field_present_invariant(self, bare_enforcer):
-        bare_enforcer.add_invariant(Invariant(
-            name="require_auth",
-            description="All API calls must have auth_token",
-            invariant_type=InvariantType.FIELD_PRESENT,
-            tool_pattern=r"api\..*",
-            field_path="auth_token",
-            severity=80,
-        ))
+        bare_enforcer.add_invariant(
+            Invariant(
+                name="require_auth",
+                description="All API calls must have auth_token",
+                invariant_type=InvariantType.FIELD_PRESENT,
+                tool_pattern=r"api\..*",
+                field_path="auth_token",
+                severity=80,
+            )
+        )
         passed, violations = bare_enforcer.check_call("api.get", {"url": "/data"})
         assert not passed
         assert violations[0].invariant_name == "require_auth"
 
     def test_value_in_set(self, bare_enforcer):
-        bare_enforcer.add_invariant(Invariant(
-            name="allowed_methods",
-            description="Only GET/POST allowed",
-            invariant_type=InvariantType.VALUE_IN_SET,
-            tool_pattern=r"http\..*",
-            field_path="method",
-            value={"GET", "POST"},
-            severity=70,
-        ))
+        bare_enforcer.add_invariant(
+            Invariant(
+                name="allowed_methods",
+                description="Only GET/POST allowed",
+                invariant_type=InvariantType.VALUE_IN_SET,
+                tool_pattern=r"http\..*",
+                field_path="method",
+                value={"GET", "POST"},
+                severity=70,
+            )
+        )
         passed, _ = bare_enforcer.check_call("http.request", {"method": "DELETE"})
         assert not passed
         passed, _ = bare_enforcer.check_call("http.request", {"method": "GET"})
         assert passed
 
     def test_max_length_invariant(self, bare_enforcer):
-        bare_enforcer.add_invariant(Invariant(
-            name="body_size_limit",
-            description="Email body max 10000 chars",
-            invariant_type=InvariantType.MAX_LENGTH,
-            tool_pattern=r"email",
-            field_path="body",
-            value=10000,
-            severity=50,
-        ))
+        bare_enforcer.add_invariant(
+            Invariant(
+                name="body_size_limit",
+                description="Email body max 10000 chars",
+                invariant_type=InvariantType.MAX_LENGTH,
+                tool_pattern=r"email",
+                field_path="body",
+                value=10000,
+                severity=50,
+            )
+        )
         passed, _ = bare_enforcer.check_call("email.send", {"body": "x" * 20000})
         assert not passed
         passed, _ = bare_enforcer.check_call("email.send", {"body": "short"})
         assert passed
 
     def test_custom_predicate(self, bare_enforcer):
-        bare_enforcer.add_invariant(Invariant(
-            name="no_self_send",
-            description="Cannot send email to yourself",
-            invariant_type=InvariantType.CUSTOM,
-            tool_pattern=r"email",
-            predicate=lambda d: d.get("to") != d.get("from"),
-            severity=60,
-        ))
+        bare_enforcer.add_invariant(
+            Invariant(
+                name="no_self_send",
+                description="Cannot send email to yourself",
+                invariant_type=InvariantType.CUSTOM,
+                tool_pattern=r"email",
+                predicate=lambda d: d.get("to") != d.get("from"),
+                severity=60,
+            )
+        )
         passed, _ = bare_enforcer.check_call(
             "email.send", {"to": "me@x.com", "from": "me@x.com"}
         )
@@ -147,16 +154,16 @@ class TestOutputInvariants:
 
     def test_tool_pattern_filters_correctly(self, bare_enforcer):
         """Invariant only applies to matching tools."""
-        bare_enforcer.add_invariant(Invariant(
-            name="email_only",
-            description="Only for email tools",
-            invariant_type=InvariantType.FIELD_ABSENT,
-            tool_pattern=r"email",
-            field_path="dangerous",
-            severity=80,
-        ))
-        # Non-email tool should not be checked
-        passed, _ = bare_enforcer.check_call(
-            "math.add", {"dangerous": "value", "a": 1}
+        bare_enforcer.add_invariant(
+            Invariant(
+                name="email_only",
+                description="Only for email tools",
+                invariant_type=InvariantType.FIELD_ABSENT,
+                tool_pattern=r"email",
+                field_path="dangerous",
+                severity=80,
+            )
         )
+        # Non-email tool should not be checked
+        passed, _ = bare_enforcer.check_call("math.add", {"dangerous": "value", "a": 1})
         assert passed

@@ -11,15 +11,16 @@ import asyncio
 import json
 import os
 import tempfile
+from secrets import compare_digest
 import time
 from typing import Any, Dict, Optional, Tuple
 
 from mcp_monitor.monitor import MCPSecurityMonitor
-from mcp_monitor.audit.log import AuditLog
+from mcp_monitor.audit.log import AuditEntry, AuditLog
 from mcp_monitor.audit.wal import WriteAheadLog
 from mcp_monitor.production.config import Config
-from mcp_monitor.production.logging import get_logger, TraceLogAdapter
-from mcp_monitor.production.circuit_breaker import CircuitBreaker, CircuitState
+from mcp_monitor.production.logging import get_logger
+from mcp_monitor.production.circuit_breaker import CircuitBreaker
 from mcp_monitor.production.rate_limiter import RateLimiter
 from mcp_monitor.production.alerting import AlertingHook
 from mcp_monitor.production.metrics import MetricsCollector
@@ -57,9 +58,7 @@ class ProductionServer:
         )
 
         # Production components
-        self._rate_limiter = RateLimiter(
-            tokens_per_minute=self.config.rate_limit_rpm
-        )
+        self._rate_limiter = RateLimiter(tokens_per_minute=self.config.rate_limit_rpm)
         self._metrics = MetricsCollector()
         self._tracer = Tracer()
         self._alerting = AlertingHook(
@@ -136,9 +135,7 @@ class ProductionServer:
     ) -> None:
         """Handle a single HTTP connection."""
         try:
-            request_line = await asyncio.wait_for(
-                reader.readline(), timeout=30.0
-            )
+            request_line = await asyncio.wait_for(reader.readline(), timeout=30.0)
             if not request_line:
                 writer.close()
                 return
@@ -156,9 +153,7 @@ class ProductionServer:
             # Read headers
             headers: Dict[str, str] = {}
             while True:
-                header_line = await asyncio.wait_for(
-                    reader.readline(), timeout=10.0
-                )
+                header_line = await asyncio.wait_for(reader.readline(), timeout=10.0)
                 header_str = header_line.decode("utf-8", errors="replace").strip()
                 if not header_str:
                     break
@@ -249,9 +244,7 @@ class ProductionServer:
             response_headers = {
                 "X-Trace-Id": trace_id,
                 "X-Span-Id": span.span_id,
-                "traceparent": self._tracer.create_traceparent(
-                    trace_id, span.span_id
-                ),
+                "traceparent": self._tracer.create_traceparent(trace_id, span.span_id),
             }
 
             await self._send_response(
@@ -291,15 +284,50 @@ class ProductionServer:
         if method == "GET" and path == "/v1/metrics":
             return self._handle_metrics()
 
-        # Inspect call
-        if method == "POST" and path == "/v1/inspect_call":
-            return self._handle_inspect_call(body, trace_id, span_id)
-
-        # Inspect output
-        if method == "POST" and path == "/v1/inspect_output":
+        if method == "POST" and path in {"/v1/inspect_call", "/v1/inspect_output"}:
+            auth_status = self._authorize(headers)
+            if auth_status is not None:
+                return auth_status
+            self._record_wal_event(path, body, trace_id, span_id)
+            if path == "/v1/inspect_call":
+                return self._handle_inspect_call(body, trace_id, span_id)
             return self._handle_inspect_output(body, trace_id, span_id)
-
         return 404, {"error": "Not found"}
+
+    def _authorize(
+        self, headers: Dict[str, str]
+    ) -> Optional[Tuple[int, Dict[str, str]]]:
+        """Authorize protected inspection endpoints."""
+        if self.config.allow_anonymous:
+            return None
+        if not self.config.api_key:
+            self._metrics.inc_error()
+            return 503, {"error": "MCP_API_KEY is not configured"}
+        supplied = headers.get("x-api-key", "")
+        if not supplied or not compare_digest(supplied, self.config.api_key):
+            self._metrics.inc_error()
+            return 401, {"error": "Unauthorized"}
+        return None
+
+    def _record_wal_event(
+        self, path: str, body: bytes, trace_id: str, span_id: str
+    ) -> None:
+        """Persist protected request metadata to WAL before processing."""
+        import hashlib
+
+        entry = AuditEntry(
+            event_type="production_request_received",
+            data={
+                "path": path,
+                "body_sha256": hashlib.sha256(body).hexdigest(),
+                "body_bytes": len(body),
+                "trace_id": trace_id,
+                "span_id": span_id,
+            },
+            prev_hash="0" * 64,
+        )
+        entry.entry_hash = entry.compute_hash()
+        self._wal.write(entry)
 
     def _handle_health(self) -> Tuple[int, Dict[str, Any]]:
         """GET /v1/health - Health check endpoint."""
@@ -349,9 +377,9 @@ class ProductionServer:
                 self._monitor.inspect_call,
                 tool_call,
                 fallback=lambda tc: {
-                    "allowed": True,
-                    "risk_score": 0,
-                    "findings": ["circuit_breaker_open"],
+                    "allowed": False,
+                    "risk_score": 100,
+                    "findings": ["circuit_breaker_open_fail_closed"],
                     "call_id": "circuit-open",
                 },
             )
@@ -403,9 +431,9 @@ class ProductionServer:
                 tool_name,
                 output,
                 fallback=lambda tn, out: {
-                    "allowed": True,
-                    "risk_score": 0,
-                    "findings": ["circuit_breaker_open"],
+                    "allowed": False,
+                    "risk_score": 100,
+                    "findings": ["circuit_breaker_open_fail_closed"],
                     "tool_name": tn,
                 },
             )

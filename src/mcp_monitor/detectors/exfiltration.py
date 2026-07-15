@@ -38,9 +38,7 @@ class ExfiltrationDetector:
     # Public API
     # ------------------------------------------------------------------
 
-    def detect(
-        self, tool_name: str, output: dict[str, Any]
-    ) -> tuple[bool, list[str]]:
+    def detect(self, tool_name: str, output: dict[str, Any]) -> tuple[bool, list[str]]:
         """Inspect a tool output for exfiltration indicators.
 
         Parameters
@@ -133,7 +131,14 @@ class ExfiltrationDetector:
 
     def _is_email_tool(self, tool_name: str) -> bool:
         """Heuristic: does this tool name look email-related?"""
-        email_keywords = ("email", "mail", "send_message", "postmark", "smtp", "sendgrid")
+        email_keywords = (
+            "email",
+            "mail",
+            "send_message",
+            "postmark",
+            "smtp",
+            "sendgrid",
+        )
         name_lower = tool_name.lower()
         return any(kw in name_lower for kw in email_keywords)
 

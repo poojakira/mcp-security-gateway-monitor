@@ -13,16 +13,14 @@ class Config:
     """Production configuration read from environment variables."""
 
     def __init__(self) -> None:
-        self.listen_port: int = int(
-            os.environ.get("MCP_LISTEN_PORT", "8080")
+        self.listen_port: int = int(os.environ.get("MCP_LISTEN_PORT", "8080"))
+        self.shadow_mode: bool = os.environ.get("MCP_SHADOW_MODE", "false").lower() in (
+            "true",
+            "1",
+            "yes",
         )
-        self.shadow_mode: bool = os.environ.get(
-            "MCP_SHADOW_MODE", "false"
-        ).lower() in ("true", "1", "yes")
         self.webhook_url: Optional[str] = os.environ.get("MCP_WEBHOOK_URL")
-        self.rate_limit_rpm: int = int(
-            os.environ.get("MCP_RATE_LIMIT_RPM", "1000")
-        )
+        self.rate_limit_rpm: int = int(os.environ.get("MCP_RATE_LIMIT_RPM", "1000"))
         self.circuit_breaker_threshold: int = int(
             os.environ.get("MCP_CIRCUIT_BREAKER_THRESHOLD", "5")
         )
@@ -33,11 +31,13 @@ class Config:
         self.allowed_servers: Set[str] = self._parse_allowed_servers(
             os.environ.get("MCP_ALLOWED_SERVERS", "")
         )
-        self.max_payload_kb: float = float(
-            os.environ.get("MCP_MAX_PAYLOAD_KB", "100")
-        )
+        self.max_payload_kb: float = float(os.environ.get("MCP_MAX_PAYLOAD_KB", "100"))
         self.wal_path: Optional[str] = os.environ.get("MCP_WAL_PATH")
         self.audit_path: Optional[str] = os.environ.get("MCP_AUDIT_PATH")
+        self.api_key: Optional[str] = os.environ.get("MCP_API_KEY")
+        self.allow_anonymous: bool = os.environ.get(
+            "MCP_ALLOW_ANONYMOUS", "false"
+        ).lower() in ("true", "1", "yes")
 
     @staticmethod
     def _parse_allowed_servers(value: str) -> Set[str]:

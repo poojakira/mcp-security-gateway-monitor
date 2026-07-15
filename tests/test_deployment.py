@@ -7,7 +7,7 @@ and locustfile.py for correctness and required content.
 import os
 import ast
 import yaml
-import pytest
+from pathlib import Path
 
 # All paths relative to project root
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -23,49 +23,49 @@ class TestDockerfile:
 
     def test_multi_stage_build(self):
         """Dockerfile must use multi-stage build."""
-        content = open(os.path.join(ROOT, "Dockerfile")).read()
+        content = Path(ROOT, "Dockerfile").read_text(encoding="utf-8")
         # Must have at least two FROM statements
         from_count = content.count("FROM ")
         assert from_count >= 2, f"Expected multi-stage build, found {from_count} FROM"
 
     def test_builder_stage(self):
         """Dockerfile must have a builder stage."""
-        content = open(os.path.join(ROOT, "Dockerfile")).read()
+        content = Path(ROOT, "Dockerfile").read_text(encoding="utf-8")
         assert "AS builder" in content or "as builder" in content
 
     def test_runtime_stage(self):
         """Dockerfile must have a runtime stage."""
-        content = open(os.path.join(ROOT, "Dockerfile")).read()
+        content = Path(ROOT, "Dockerfile").read_text(encoding="utf-8")
         assert "AS runtime" in content or "as runtime" in content
 
     def test_python_slim_base(self):
         """Dockerfile must use python:3.11-slim."""
-        content = open(os.path.join(ROOT, "Dockerfile")).read()
+        content = Path(ROOT, "Dockerfile").read_text(encoding="utf-8")
         assert "python:3.11-slim" in content
 
     def test_expose_8080(self):
         """Dockerfile must expose port 8080."""
-        content = open(os.path.join(ROOT, "Dockerfile")).read()
+        content = Path(ROOT, "Dockerfile").read_text(encoding="utf-8")
         assert "EXPOSE 8080" in content
 
     def test_healthcheck(self):
         """Dockerfile must include HEALTHCHECK instruction."""
-        content = open(os.path.join(ROOT, "Dockerfile")).read()
+        content = Path(ROOT, "Dockerfile").read_text(encoding="utf-8")
         assert "HEALTHCHECK" in content
 
     def test_healthcheck_targets_health_endpoint(self):
         """HEALTHCHECK must target /v1/health."""
-        content = open(os.path.join(ROOT, "Dockerfile")).read()
+        content = Path(ROOT, "Dockerfile").read_text(encoding="utf-8")
         assert "/v1/health" in content
 
     def test_cmd_instruction(self):
         """Dockerfile must have CMD to run the server."""
-        content = open(os.path.join(ROOT, "Dockerfile")).read()
+        content = Path(ROOT, "Dockerfile").read_text(encoding="utf-8")
         assert "CMD" in content
 
     def test_runs_tests_in_builder(self):
         """Builder stage must run tests."""
-        content = open(os.path.join(ROOT, "Dockerfile")).read()
+        content = Path(ROOT, "Dockerfile").read_text(encoding="utf-8")
         assert "pytest" in content
 
 
@@ -100,7 +100,7 @@ class TestDockerCompose:
             data = yaml.safe_load(f)
         service = data["services"]["mcp-monitor"]
         assert "ports" in service
-        assert "8080:8080" in service["ports"]
+        assert "127.0.0.1:8080:8080" in service["ports"]
 
     def test_healthcheck(self):
         """Service must have healthcheck."""
@@ -126,6 +126,7 @@ class TestDockerCompose:
         env_names = [e.split("=")[0] for e in env_list]
         assert "MCP_LISTEN_PORT" in env_names
         assert "MCP_SHADOW_MODE" in env_names
+        assert "MCP_API_KEY" in env_names
 
 
 class TestKubernetesNamespace:
@@ -343,7 +344,8 @@ class TestKubernetesHPA:
             data = yaml.safe_load(f)
         metrics = data["spec"]["metrics"]
         cpu_metric = next(
-            m for m in metrics
+            m
+            for m in metrics
             if m["type"] == "Resource" and m["resource"]["name"] == "cpu"
         )
         assert cpu_metric["resource"]["target"]["averageUtilization"] == 70
@@ -366,37 +368,37 @@ class TestLocustfile:
 
     def test_imports_locust(self):
         """locustfile.py must import from locust."""
-        content = open(os.path.join(ROOT, "locustfile.py")).read()
+        content = Path(ROOT, "locustfile.py").read_text(encoding="utf-8")
         assert "from locust import" in content or "import locust" in content
 
     def test_defines_http_user(self):
         """locustfile.py must define an HttpUser subclass."""
-        content = open(os.path.join(ROOT, "locustfile.py")).read()
+        content = Path(ROOT, "locustfile.py").read_text(encoding="utf-8")
         assert "HttpUser" in content
 
     def test_has_task_decorator(self):
         """locustfile.py must use @task decorator."""
-        content = open(os.path.join(ROOT, "locustfile.py")).read()
+        content = Path(ROOT, "locustfile.py").read_text(encoding="utf-8")
         assert "@task" in content
 
     def test_exercises_inspect_call(self):
         """Must test /v1/inspect_call endpoint."""
-        content = open(os.path.join(ROOT, "locustfile.py")).read()
+        content = Path(ROOT, "locustfile.py").read_text(encoding="utf-8")
         assert "/v1/inspect_call" in content
 
     def test_exercises_inspect_output(self):
         """Must test /v1/inspect_output endpoint."""
-        content = open(os.path.join(ROOT, "locustfile.py")).read()
+        content = Path(ROOT, "locustfile.py").read_text(encoding="utf-8")
         assert "/v1/inspect_output" in content
 
     def test_exercises_health_check(self):
         """Must test /v1/health endpoint."""
-        content = open(os.path.join(ROOT, "locustfile.py")).read()
+        content = Path(ROOT, "locustfile.py").read_text(encoding="utf-8")
         assert "/v1/health" in content
 
     def test_documents_target_throughput(self):
         """Must document 5000 req/s target."""
-        content = open(os.path.join(ROOT, "locustfile.py")).read()
+        content = Path(ROOT, "locustfile.py").read_text(encoding="utf-8")
         assert "5000" in content
 
     def test_valid_python_syntax(self):
@@ -409,7 +411,7 @@ class TestLocustfile:
 
     def test_has_realistic_payloads(self):
         """Must have realistic payloads with name, server_id, arguments."""
-        content = open(os.path.join(ROOT, "locustfile.py")).read()
+        content = Path(ROOT, "locustfile.py").read_text(encoding="utf-8")
         assert '"name"' in content
         assert '"server_id"' in content
         assert '"arguments"' in content

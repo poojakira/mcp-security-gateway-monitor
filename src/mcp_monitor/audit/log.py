@@ -31,10 +31,7 @@ class AuditEntry:
     def compute_hash(self) -> str:
         """Compute SHA-256 hash from prev_hash + timestamp + event_type + data."""
         content = (
-            self.prev_hash
-            + str(self.timestamp)
-            + self.event_type
-            + str(self.data)
+            self.prev_hash + str(self.timestamp) + self.event_type + str(self.data)
         )
         return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
@@ -75,9 +72,7 @@ class AuditLog:
             hash does not match the expected value.
         """
         for i, entry in enumerate(self._entries):
-            expected_prev = (
-                self._entries[i - 1].entry_hash if i > 0 else "0" * 64
-            )
+            expected_prev = self._entries[i - 1].entry_hash if i > 0 else "0" * 64
             if entry.prev_hash != expected_prev:
                 return (False, i)
             expected_hash = entry.compute_hash()
@@ -91,9 +86,7 @@ class AuditLog:
 
     def export_json(self) -> str:
         """Export the full log as a JSON string."""
-        return json.dumps(
-            [asdict(entry) for entry in self._entries], indent=2
-        )
+        return json.dumps([asdict(entry) for entry in self._entries], indent=2)
 
     @property
     def entries(self) -> list[AuditEntry]:

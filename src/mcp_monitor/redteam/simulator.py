@@ -10,7 +10,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-from mcp_monitor.layers.kernel import KernelMonitor, SyscallEvent, SyscallType
+from mcp_monitor.layers.kernel import SyscallEvent, SyscallType
 from mcp_monitor.layers.orchestrator import FiveLayerDefense
 from mcp_monitor.redteam.payloads import ATTACK_CATALOG
 
@@ -18,6 +18,7 @@ from mcp_monitor.redteam.payloads import ATTACK_CATALOG
 @dataclass
 class AttackResult:
     """Result of a single attack simulation."""
+
     attack_name: str
     category: str
     severity: str
@@ -33,6 +34,7 @@ class AttackResult:
 @dataclass
 class SimulationReport:
     """Full report from a simulation run."""
+
     total_attacks: int = 0
     blocked: int = 0
     missed: int = 0
@@ -124,7 +126,9 @@ class AttackSimulator:
         for ke in kernel_events:
             syscall_type = SyscallType(ke["syscall_type"])
             event = SyscallEvent(
-                server_id=attack.get("tool_call", {}).get("server_id", "unknown") if tool_call else "unknown",
+                server_id=attack.get("tool_call", {}).get("server_id", "unknown")
+                if tool_call
+                else "unknown",
                 syscall_type=syscall_type,
                 details=ke["details"],
             )

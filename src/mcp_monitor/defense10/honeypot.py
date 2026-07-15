@@ -23,6 +23,7 @@ from typing import Any
 @dataclass
 class CanaryTrip:
     """Record of a canary token being detected in outbound data."""
+
     token_id: str
     token_value: str
     context: str

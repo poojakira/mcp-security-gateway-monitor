@@ -1,14 +1,10 @@
 """Tests for cross-tool correlation engine — 15 tests."""
 
-import time
-
 import pytest
 
 from mcp_monitor.advanced.correlation import (
-    CorrelationAlert,
     CorrelationRule,
     CrossToolCorrelationEngine,
-    ToolCallEvent,
 )
 
 
@@ -21,11 +17,14 @@ class TestSequenceDetection:
     def test_read_then_exfil_detected(self, engine):
         """Core: reading secrets then sending email = exfiltration."""
         engine.record_call(
-            "secrets.read", "vault", {"key": "api_token"},
+            "secrets.read",
+            "vault",
+            {"key": "api_token"},
             output={"value": "sk-live-ABCDEFGHIJKLMNOP1234"},
         )
         alerts = engine.record_call(
-            "email.send", "postmark",
+            "email.send",
+            "postmark",
             {"to": "user@x.com", "body": "Token: sk-live-ABCDEFGHIJKLMNOP1234"},
         )
         assert len(alerts) >= 1
@@ -39,9 +38,7 @@ class TestSequenceDetection:
 
     def test_recon_then_exploit_detected(self, engine):
         engine.record_call("list_users", "admin", {"filter": "all"})
-        alerts = engine.record_call(
-            "delete_user", "admin", {"user_id": "victim"}
-        )
+        alerts = engine.record_call("delete_user", "admin", {"user_id": "victim"})
         assert any(a.rule_name == "recon_then_exploit" for a in alerts)
 
     def test_benign_sequence_not_flagged(self, engine):
@@ -106,10 +103,15 @@ class TestWindowManagement:
         assert recent[-1].tool_name == "tool_19"
 
     def test_get_alerts_accumulates(self, engine):
-        engine.record_call("secrets.read", "vault", {"key": "x"},
-                          output={"value": "SUPERSECRETVALUE1234567890"})
-        engine.record_call("email.send", "mail",
-                          {"body": "Leaked: SUPERSECRETVALUE1234567890"})
+        engine.record_call(
+            "secrets.read",
+            "vault",
+            {"key": "x"},
+            output={"value": "SUPERSECRETVALUE1234567890"},
+        )
+        engine.record_call(
+            "email.send", "mail", {"body": "Leaked: SUPERSECRETVALUE1234567890"}
+        )
         all_alerts = engine.get_alerts()
         assert len(all_alerts) >= 1
 

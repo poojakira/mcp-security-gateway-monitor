@@ -102,9 +102,7 @@ class TraceLogAdapter(logging.LoggerAdapter):
         self._trace_id = trace_id
         self._span_id = span_id
 
-    def process(
-        self, msg: str, kwargs: Any
-    ) -> tuple[str, Any]:
+    def process(self, msg: str, kwargs: Any) -> tuple[str, Any]:
         """Inject trace context into the log record."""
         extra = kwargs.get("extra", {})
         if self._trace_id:

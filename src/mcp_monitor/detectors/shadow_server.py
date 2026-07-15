@@ -23,9 +23,7 @@ class ShadowServerDetector:
     # Public API
     # ------------------------------------------------------------------
 
-    def register_server(
-        self, server_id: str, capabilities: list[str]
-    ) -> None:
+    def register_server(self, server_id: str, capabilities: list[str]) -> None:
         """Register a server as known/trusted with its declared capabilities."""
         self._allowed.add(server_id)
         self._registry[server_id] = {

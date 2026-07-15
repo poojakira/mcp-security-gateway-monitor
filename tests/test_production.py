@@ -10,16 +10,14 @@ import asyncio
 import json
 import logging
 import os
-import signal
-import tempfile
 import threading
 import time
-from unittest.mock import MagicMock, patch, ANY
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from mcp_monitor.production.config import Config
-from mcp_monitor.production.logging import JSONFormatter, get_logger, TraceLogAdapter
+from mcp_monitor.production.logging import JSONFormatter, get_logger
 from mcp_monitor.production.circuit_breaker import (
     CircuitBreaker,
     CircuitOpenError,
@@ -28,7 +26,7 @@ from mcp_monitor.production.circuit_breaker import (
 from mcp_monitor.production.rate_limiter import RateLimiter
 from mcp_monitor.production.alerting import AlertingHook
 from mcp_monitor.production.metrics import MetricsCollector
-from mcp_monitor.production.tracing import Tracer, Span
+from mcp_monitor.production.tracing import Tracer
 from mcp_monitor.production.shutdown import GracefulShutdown
 from mcp_monitor.production.server import ProductionServer
 
@@ -196,6 +194,7 @@ class TestJSONLogging:
             raise ValueError("test error")
         except ValueError:
             import sys
+
             exc_info = sys.exc_info()
 
         record = logging.LogRecord(
@@ -617,7 +616,7 @@ class TestTracing:
         tracer = Tracer()
         trace_id = tracer.start_trace()
         s1 = tracer.start_span("s1", trace_id)
-        s2 = tracer.start_span("s2", trace_id)
+        tracer.start_span("s2", trace_id)
         tracer.end_span(s1)
         completed = tracer.get_completed_spans()
         assert len(completed) == 1
@@ -750,9 +749,7 @@ class TestProductionServer:
     def test_inspect_call_invalid_json(self):
         """POST /v1/inspect_call rejects invalid JSON."""
         server = self._make_server()
-        status, result = server._handle_inspect_call(
-            b"not json", "t1", "s1"
-        )
+        status, result = server._handle_inspect_call(b"not json", "t1", "s1")
         assert status == 400
         assert "error" in result
 
@@ -782,6 +779,88 @@ class TestProductionServer:
         assert status == 200
         assert result["allowed"] is True
         assert result.get("shadow_mode") is True
+
+    def test_inspect_route_requires_api_key(self):
+        """Protected inspect routes fail closed when MCP_API_KEY is absent."""
+        server = self._make_server()
+        body = json.dumps(
+            {"name": "read_file", "server_id": "trusted", "arguments": {}}
+        ).encode("utf-8")
+        loop = asyncio.new_event_loop()
+        try:
+            status, result = loop.run_until_complete(
+                server._route("POST", "/v1/inspect_call", body, {}, "trace", "span")
+            )
+            assert status == 503
+            assert result["error"] == "MCP_API_KEY is not configured"
+        finally:
+            loop.close()
+
+    def test_inspect_route_rejects_bad_api_key(self):
+        """Protected inspect routes reject missing or wrong API keys."""
+        server = self._make_server(MCP_API_KEY="secret")
+        body = json.dumps(
+            {"name": "read_file", "server_id": "trusted", "arguments": {}}
+        ).encode("utf-8")
+        loop = asyncio.new_event_loop()
+        try:
+            status, result = loop.run_until_complete(
+                server._route(
+                    "POST",
+                    "/v1/inspect_call",
+                    body,
+                    {"x-api-key": "wrong"},
+                    "trace",
+                    "span",
+                )
+            )
+            assert status == 401
+            assert result["error"] == "Unauthorized"
+        finally:
+            loop.close()
+
+    def test_inspect_route_writes_wal_before_processing(self, tmp_path):
+        """Protected inspect routes write request metadata to WAL before monitor processing."""
+        wal_path = tmp_path / "server.wal"
+        server = self._make_server(MCP_API_KEY="secret", MCP_WAL_PATH=str(wal_path))
+        body = json.dumps(
+            {"name": "read_file", "server_id": "trusted", "arguments": {}}
+        ).encode("utf-8")
+        loop = asyncio.new_event_loop()
+        try:
+            status, result = loop.run_until_complete(
+                server._route(
+                    "POST",
+                    "/v1/inspect_call",
+                    body,
+                    {"x-api-key": "secret"},
+                    "trace",
+                    "span",
+                )
+            )
+            assert status == 200
+            assert "allowed" in result
+            recovered = server._wal.recover()
+            assert len(recovered) == 1
+            assert recovered[0].event_type == "production_request_received"
+            assert recovered[0].data["path"] == "/v1/inspect_call"
+        finally:
+            loop.close()
+
+    def test_inspect_call_circuit_breaker_fails_closed(self):
+        """Circuit breaker fallback blocks instead of allowing risky traffic."""
+        server = self._make_server(MCP_CIRCUIT_BREAKER_THRESHOLD="1")
+        server._monitor.inspect_call = lambda tc: (_ for _ in ()).throw(
+            RuntimeError("boom")
+        )
+        body = json.dumps(
+            {"name": "send_email", "server_id": "trusted", "arguments": {}}
+        ).encode("utf-8")
+        status, result = server._handle_inspect_call(body, "trace", "span")
+        assert status == 200
+        assert result["allowed"] is False
+        assert result["risk_score"] == 100
+        assert "circuit_breaker_open_fail_closed" in result["findings"]
 
     def test_routing_404(self):
         """Unknown paths return 404."""

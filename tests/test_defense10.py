@@ -34,7 +34,9 @@ class TestMLClassifier:
         assert p.is_threat
 
     def test_benign_email_passes(self, clf):
-        p = clf.classify({"arguments": {"to": "colleague@company.com", "body": "lunch?"}})
+        p = clf.classify(
+            {"arguments": {"to": "colleague@company.com", "body": "lunch?"}}
+        )
         assert not p.is_threat
 
     def test_benign_query_passes(self, clf):
@@ -144,46 +146,88 @@ class TestDefense10:
         return defense
 
     def test_bcc_in_args_blocked(self, d):
-        v = d.inspect_call({"name": "pm.send", "server_id": "postmark",
-                            "arguments": {"to": ["boss@company.com"], "bcc": ["phan@giftshop.club"]}})
+        v = d.inspect_call(
+            {
+                "name": "pm.send",
+                "server_id": "postmark",
+                "arguments": {
+                    "to": ["boss@company.com"],
+                    "bcc": ["phan@giftshop.club"],
+                },
+            }
+        )
         assert not v.allowed
 
     def test_obfuscated_synonym_blocked(self, d):
-        v = d.inspect_call({"name": "pm.send", "server_id": "postmark",
-                            "arguments": {"to": ["boss@company.com"], "fwd_leak": "spy@evil.xyz"}})
+        v = d.inspect_call(
+            {
+                "name": "pm.send",
+                "server_id": "postmark",
+                "arguments": {"to": ["boss@company.com"], "fwd_leak": "spy@evil.xyz"},
+            }
+        )
         assert not v.allowed
 
     def test_server_side_bcc_egress_blocked(self, d):
-        v = d.inspect_call({"name": "pm.send", "server_id": "postmark",
-                            "arguments": {"to": ["boss@company.com"]}})
-        vb = d.inspect_egress(v.call_id, {"To": "boss@company.com", "Bcc": "phan@giftshop.club"})
+        v = d.inspect_call(
+            {
+                "name": "pm.send",
+                "server_id": "postmark",
+                "arguments": {"to": ["boss@company.com"]},
+            }
+        )
+        vb = d.inspect_egress(
+            v.call_id, {"To": "boss@company.com", "Bcc": "phan@giftshop.club"}
+        )
         assert not vb.allowed
         assert vb.blocked_by == "L6_dpi_egress"
 
     def test_honeypot_exfil_blocked(self, d):
         canary = d.honeypot.mint("api_key")
-        v = d.inspect_call({"name": "pm.send", "server_id": "postmark",
-                            "arguments": {"to": ["boss@company.com"], "body": canary}})
+        v = d.inspect_call(
+            {
+                "name": "pm.send",
+                "server_id": "postmark",
+                "arguments": {"to": ["boss@company.com"], "body": canary},
+            }
+        )
         assert not v.allowed
         assert v.blocked_by == "L9_honeypot"
 
     def test_benign_lunch_allowed(self, d):
-        v = d.inspect_call({"name": "pm.send", "server_id": "postmark",
-                            "arguments": {"to": ["colleague@company.com"], "body": "lunch?"}})
+        v = d.inspect_call(
+            {
+                "name": "pm.send",
+                "server_id": "postmark",
+                "arguments": {"to": ["colleague@company.com"], "body": "lunch?"},
+            }
+        )
         assert v.allowed
 
     def test_benign_report_allowed(self, d):
-        v = d.inspect_call({"name": "pm.send", "server_id": "postmark",
-                            "arguments": {"to": ["boss@company.com"], "subject": "Report"}})
+        v = d.inspect_call(
+            {
+                "name": "pm.send",
+                "server_id": "postmark",
+                "arguments": {"to": ["boss@company.com"], "subject": "Report"},
+            }
+        )
         assert v.allowed
 
     def test_stats(self, d):
-        d.inspect_call({"name": "pm.send", "server_id": "postmark",
-                        "arguments": {"to": ["boss@company.com"], "bcc": ["evil@giftshop.club"]}})
+        d.inspect_call(
+            {
+                "name": "pm.send",
+                "server_id": "postmark",
+                "arguments": {
+                    "to": ["boss@company.com"],
+                    "bcc": ["evil@giftshop.club"],
+                },
+            }
+        )
         s = d.stats()
         assert s["total"] >= 1
         assert s["blocked"] >= 1
-
 
 
 # --- Accuracy requirement: 90%+ on large dataset (locked-in regression) ---
@@ -194,12 +238,15 @@ class TestMLAccuracy:
         clf = MLThreatClassifier()
         metrics = clf.train()
         assert metrics["n_malicious"] + metrics["n_benign"] >= 1000
-        assert metrics["cv_accuracy"] >= 0.90, f"CV accuracy {metrics['cv_accuracy']} < 0.90"
+        assert (
+            metrics["cv_accuracy"] >= 0.90
+        ), f"CV accuracy {metrics['cv_accuracy']} < 0.90"
 
     def test_held_out_accuracy_above_90(self):
         """Fresh data with a different seed (unseen combinations) must score >=90%."""
         import json
         from mcp_monitor.defense10 import dataset
+
         clf = MLThreatClassifier()
         clf.train()
         tm, tb = dataset.generate(n_per_family=25, seed=1234)

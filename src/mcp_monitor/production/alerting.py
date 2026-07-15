@@ -88,9 +88,7 @@ class AlertingHook:
         call_id = result.get("call_id", "unknown")
 
         return {
-            "text": (
-                f"[CRITICAL] MCP Security Alert - Risk Score: {risk_score}"
-            ),
+            "text": (f"[CRITICAL] MCP Security Alert - Risk Score: {risk_score}"),
             "blocks": [
                 {
                     "type": "section",

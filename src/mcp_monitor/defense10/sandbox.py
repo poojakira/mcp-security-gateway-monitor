@@ -20,7 +20,6 @@ all outbound traffic.
 
 from __future__ import annotations
 
-import json
 import shutil
 import subprocess
 from dataclasses import dataclass, field
@@ -30,7 +29,7 @@ from typing import Any
 @dataclass
 class SandboxConfig:
     image: str = "python:3.12-alpine"
-    network: str = "none"              # "none" | "<egress-proxy-net>"
+    network: str = "none"  # "none" | "<egress-proxy-net>"
     read_only: bool = True
     memory: str = "256m"
     cpus: str = "0.5"
@@ -39,10 +38,18 @@ class SandboxConfig:
     extra_args: list[str] = field(default_factory=list)
 
     # Allowlist of acceptable extra docker flags. Any flag not in this list is rejected.
-    _ALLOWED_EXTRA_ARGS = frozenset([
-        "--tmpfs", "--env", "--label", "--workdir", "--user",
-        "--hostname", "--entrypoint", "--stop-timeout",
-    ])
+    _ALLOWED_EXTRA_ARGS = frozenset(
+        [
+            "--tmpfs",
+            "--env",
+            "--label",
+            "--workdir",
+            "--user",
+            "--hostname",
+            "--entrypoint",
+            "--stop-timeout",
+        ]
+    )
 
 
 @dataclass
@@ -89,9 +96,17 @@ class DockerSandbox:
             args += ["--security-opt", "no-new-privileges"]
         args += ["--memory", c.memory, "--cpus", c.cpus]
         # Validate extra_args — reject dangerous flags
-        _BLOCKED_PATTERNS = ("--privileged", "--network=host", "--network host",
-                             "--pid=host", "--pid host", "--volume", "-v ",
-                             "--cap-add", "--device")
+        _BLOCKED_PATTERNS = (
+            "--privileged",
+            "--network=host",
+            "--network host",
+            "--pid=host",
+            "--pid host",
+            "--volume",
+            "-v ",
+            "--cap-add",
+            "--device",
+        )
         for ea in c.extra_args:
             if any(bp in ea.lower() for bp in _BLOCKED_PATTERNS):
                 continue  # silently drop dangerous flags
@@ -104,13 +119,18 @@ class DockerSandbox:
         """Execute a command inside the sandbox."""
         if not self.available:
             return SandboxResult(
-                exit_code=-1, stdout="", stderr="no container runtime available",
+                exit_code=-1,
+                stdout="",
+                stderr="no container runtime available",
                 network_blocked=False,
             )
         full = self.build_command(cmd)
         try:
             proc = subprocess.run(
-                full, capture_output=True, text=True, timeout=timeout,
+                full,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
             )
             return SandboxResult(
                 exit_code=proc.returncode,
@@ -121,8 +141,11 @@ class DockerSandbox:
             )
         except subprocess.TimeoutExpired:
             return SandboxResult(
-                exit_code=-2, stdout="", stderr="timeout",
-                network_blocked=(self._config.network == "none"), command=full,
+                exit_code=-2,
+                stdout="",
+                stderr="timeout",
+                network_blocked=(self._config.network == "none"),
+                command=full,
             )
 
     def verify_network_isolation(self) -> dict[str, Any]:
@@ -135,7 +158,8 @@ class DockerSandbox:
             return {"available": False, "isolated": None}
         # Try to connect out; should fail under --network none
         test_cmd = [
-            "sh", "-c",
+            "sh",
+            "-c",
             "wget -T 2 -q -O- http://1.1.1.1 2>&1 && echo REACHED || echo BLOCKED",
         ]
         result = self.run(test_cmd, timeout=15)

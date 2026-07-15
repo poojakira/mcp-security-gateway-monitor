@@ -13,7 +13,6 @@ import os
 import tempfile
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any
 
 from mcp_monitor.audit.log import AuditEntry
 
@@ -87,7 +86,7 @@ class WriteAheadLog:
                 all_entries.append(entry)
 
         # Return only uncommitted entries (those after the checkpoint)
-        uncommitted = all_entries[self._committed_count:]
+        uncommitted = all_entries[self._committed_count :]
         return uncommitted
 
     def checkpoint(self) -> None:

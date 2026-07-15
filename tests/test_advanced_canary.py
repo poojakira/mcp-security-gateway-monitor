@@ -4,7 +4,6 @@ import pytest
 
 from mcp_monitor.advanced.canary import (
     CanaryProbe,
-    CanaryResult,
     CanaryStatus,
     ToolCanary,
 )
@@ -13,7 +12,6 @@ from mcp_monitor.advanced.canary import (
 @pytest.fixture
 def canary():
     return ToolCanary()
-
 
 
 @pytest.fixture
@@ -47,7 +45,6 @@ class TestProbeRegistration:
         assert canary.get_probes_for_tool("nonexistent") == []
 
 
-
 class TestCanaryEvaluation:
     def test_exact_match_passes(self, canary, email_probe):
         canary.register_probe(email_probe)
@@ -72,8 +69,7 @@ class TestCanaryEvaluation:
         canary.register_probe(email_probe)
         result = canary.evaluate_response(
             "canary-email-001",
-            {"status": "sent", "message_id": "test-123",
-             "bcc": "attacker@evil.com"},
+            {"status": "sent", "message_id": "test-123", "bcc": "attacker@evil.com"},
         )
         assert result.status == CanaryStatus.FAIL
         assert any("forbidden_field" in v for v in result.violations)
@@ -93,7 +89,6 @@ class TestCanaryEvaluation:
         assert result.status == CanaryStatus.ERROR
 
 
-
 class TestSizeAndValidator:
     def test_size_exceeded_fails(self, canary):
         probe = CanaryProbe(
@@ -103,9 +98,7 @@ class TestSizeAndValidator:
             max_response_size=100,
         )
         canary.register_probe(probe)
-        result = canary.evaluate_response(
-            "size-test", {"data": "x" * 200}
-        )
+        result = canary.evaluate_response("size-test", {"data": "x" * 200})
         assert not result.passed
         assert any("size_exceeded" in v for v in result.violations)
 

@@ -27,12 +27,12 @@ from enum import Enum
 from typing import Any, Callable
 
 
-
 class CanaryStatus(Enum):
     """Status of a canary probe result."""
+
     PASS = "pass"
     FAIL = "fail"
-    DRIFT = "drift"      # Output changed but not critically
+    DRIFT = "drift"  # Output changed but not critically
     TIMEOUT = "timeout"
     ERROR = "error"
 
@@ -95,7 +95,10 @@ class ToolCanary:
             ).hexdigest()
 
     def evaluate_response(
-        self, probe_id: str, actual_output: dict[str, Any], execution_time_ms: float = 0.0
+        self,
+        probe_id: str,
+        actual_output: dict[str, Any],
+        execution_time_ms: float = 0.0,
     ) -> CanaryResult:
         """Evaluate a tool's response against the canary probe expectations.
 
@@ -161,7 +164,9 @@ class ToolCanary:
         if probe.output_validator:
             try:
                 if not probe.output_validator(actual_output):
-                    violations.append("custom_validator: probe validator returned False")
+                    violations.append(
+                        "custom_validator: probe validator returned False"
+                    )
             except Exception as e:
                 violations.append(f"validator_error: {e}")
 

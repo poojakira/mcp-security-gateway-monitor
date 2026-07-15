@@ -107,13 +107,17 @@ class TestTrustScoring:
         initial = detector.score_server_trust("github")
         # Simulate calls
         for _ in range(5):
-            detector.detect({"name": "repos.list", "server_id": "github", "arguments": {}})
+            detector.detect(
+                {"name": "repos.list", "server_id": "github", "arguments": {}}
+            )
         after = detector.score_server_trust("github")
         assert after > initial
 
     def test_score_capped_at_100(self, detector):
         for _ in range(100):
-            detector.detect({"name": "repos.list", "server_id": "github", "arguments": {}})
+            detector.detect(
+                {"name": "repos.list", "server_id": "github", "arguments": {}}
+            )
         score = detector.score_server_trust("github")
         assert score <= 100
 

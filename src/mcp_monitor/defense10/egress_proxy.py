@@ -46,7 +46,9 @@ class IntentRegistry:
     TTL: Intent records expire after max_age_seconds to prevent unbounded memory.
     """
 
-    def __init__(self, *, max_age_seconds: float = 300.0, max_entries: int = 10000) -> None:
+    def __init__(
+        self, *, max_age_seconds: float = 300.0, max_entries: int = 10000
+    ) -> None:
         self._intents: dict[str, dict[str, Any]] = {}
         self._max_age = max_age_seconds
         self._max_entries = max_entries
@@ -73,8 +75,10 @@ class IntentRegistry:
         now = time.time()
         if len(self._intents) > self._max_entries:
             # Remove oldest entries
-            sorted_keys = sorted(self._intents.keys(), key=lambda k: self._intents[k]["ts"])
-            for k in sorted_keys[:len(sorted_keys) // 2]:
+            sorted_keys = sorted(
+                self._intents.keys(), key=lambda k: self._intents[k]["ts"]
+            )
+            for k in sorted_keys[: len(sorted_keys) // 2]:
                 del self._intents[k]
         # Remove expired
         expired = [k for k, v in self._intents.items() if now - v["ts"] > self._max_age]
@@ -167,6 +171,7 @@ def get_mitmproxy_addon(inspector: "EgressInspector"):
 
     def _make_blocked_response(verdict):  # pragma: no cover
         from mitmproxy import http
+
         return http.Response.make(
             403,
             json.dumps({"blocked": True, "reason": verdict.reason}).encode(),

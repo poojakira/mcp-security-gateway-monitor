@@ -31,9 +31,7 @@ class MCPSecurityMonitor:
         self.injection_detector = PromptInjectionDetector()
         self.pii_detector = PIIDetector()
         self.shadow_detector = ShadowServerDetector(allowed_servers)
-        self.exfiltration_detector = ExfiltrationDetector(
-            max_payload_kb=max_payload_kb
-        )
+        self.exfiltration_detector = ExfiltrationDetector(max_payload_kb=max_payload_kb)
 
     # ------------------------------------------------------------------
     # Public API
@@ -78,9 +76,7 @@ class MCPSecurityMonitor:
         # 4. Exfiltration (on arguments treated as partial output)
         tool_name = tool_call.get("name", "")
         arguments = tool_call.get("arguments", {})
-        exfil, exfil_reasons = self.exfiltration_detector.detect(
-            tool_name, arguments
-        )
+        exfil, exfil_reasons = self.exfiltration_detector.detect(tool_name, arguments)
         if exfil:
             for r in exfil_reasons:
                 findings.append(f"exfiltration:{r}")
@@ -109,9 +105,7 @@ class MCPSecurityMonitor:
             "call_id": call_id,
         }
 
-    def inspect_output(
-        self, tool_name: str, output: dict[str, Any]
-    ) -> dict[str, Any]:
+    def inspect_output(self, tool_name: str, output: dict[str, Any]) -> dict[str, Any]:
         """Inspect a tool's output for exfiltration and PII leakage.
 
         Parameters
@@ -130,9 +124,7 @@ class MCPSecurityMonitor:
         risk_scores: list[int] = []
 
         # Exfiltration check
-        exfil, exfil_reasons = self.exfiltration_detector.detect(
-            tool_name, output
-        )
+        exfil, exfil_reasons = self.exfiltration_detector.detect(tool_name, output)
         if exfil:
             for r in exfil_reasons:
                 findings.append(f"exfiltration:{r}")

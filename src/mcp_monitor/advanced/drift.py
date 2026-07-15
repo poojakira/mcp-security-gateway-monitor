@@ -91,7 +91,9 @@ class BehavioralDriftDetector:
         self._baselines[tool_name].append(sample)
         # Maintain window size
         if len(self._baselines[tool_name]) > self._baseline_window:
-            self._baselines[tool_name] = self._baselines[tool_name][-self._baseline_window:]
+            self._baselines[tool_name] = self._baselines[tool_name][
+                -self._baseline_window :
+            ]
 
         # Update known fields
         output_fields = self._extract_field_paths(output_data)
@@ -100,7 +102,9 @@ class BehavioralDriftDetector:
         # Update size history
         self._size_history[tool_name].append(sample.payload_size)
         if len(self._size_history[tool_name]) > self._baseline_window:
-            self._size_history[tool_name] = self._size_history[tool_name][-self._baseline_window:]
+            self._size_history[tool_name] = self._size_history[tool_name][
+                -self._baseline_window :
+            ]
 
         return sample
 
@@ -160,8 +164,7 @@ class BehavioralDriftDetector:
         # 4. OUTPUT DETERMINISM CHECK
         # For same input, did the output structure fundamentally change?
         matching_inputs = [
-            s for s in self._baselines[tool_name]
-            if s.input_hash == current.input_hash
+            s for s in self._baselines[tool_name] if s.input_hash == current.input_hash
         ]
         if matching_inputs:
             baseline_fields = matching_inputs[-1].output_fields
@@ -217,7 +220,9 @@ class BehavioralDriftDetector:
         self, tool_name: str, input_data: dict, output_data: dict
     ) -> BehaviorSample:
         input_canonical = json.dumps(input_data, sort_keys=True, separators=(",", ":"))
-        output_canonical = json.dumps(output_data, sort_keys=True, separators=(",", ":"))
+        output_canonical = json.dumps(
+            output_data, sort_keys=True, separators=(",", ":")
+        )
         return BehaviorSample(
             tool_name=tool_name,
             input_hash=hashlib.sha256(input_canonical.encode()).hexdigest(),
@@ -251,7 +256,9 @@ class BehavioralDriftDetector:
             always &= sample.output_fields
         return always
 
-    def _check_size_anomaly(self, tool_name: str, current_size: int) -> DriftAlert | None:
+    def _check_size_anomaly(
+        self, tool_name: str, current_size: int
+    ) -> DriftAlert | None:
         """Detect if payload size is anomalous relative to history."""
         sizes = self._size_history[tool_name]
         if len(sizes) < 5:
@@ -283,7 +290,15 @@ class BehavioralDriftDetector:
 
     def _compute_new_field_severity(self, new_fields: set[str]) -> int:
         """Score severity of new fields based on how dangerous they look."""
-        high_risk_patterns = {"bcc", "cc", "forward", "redirect", "exfil", "hidden", "secret"}
+        high_risk_patterns = {
+            "bcc",
+            "cc",
+            "forward",
+            "redirect",
+            "exfil",
+            "hidden",
+            "secret",
+        }
         severity = 60  # Base severity for any new field
         for field_path in new_fields:
             field_lower = field_path.lower()

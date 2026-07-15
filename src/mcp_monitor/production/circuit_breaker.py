@@ -90,15 +90,13 @@ class CircuitBreaker:
         if current_state == CircuitState.OPEN:
             if fallback is not None:
                 return fallback(*args, **kwargs)
-            raise CircuitOpenError(
-                f"Circuit '{self.name}' is open"
-            )
+            raise CircuitOpenError(f"Circuit '{self.name}' is open")
 
         try:
             result = func(*args, **kwargs)
             self._on_success()
             return result
-        except Exception as exc:
+        except Exception:
             self._on_failure()
             if fallback is not None and self.state == CircuitState.OPEN:
                 return fallback(*args, **kwargs)

@@ -2,7 +2,7 @@
 
 import pytest
 
-from mcp_monitor.advanced.drift import BehavioralDriftDetector, DriftAlert
+from mcp_monitor.advanced.drift import BehavioralDriftDetector
 
 
 @pytest.fixture
@@ -78,9 +78,7 @@ class TestNewFieldDetection:
     def test_no_drift_when_consistent(self, detector):
         for i in range(10):
             detector.record_baseline("tool", {"x": i}, {"status": "ok"})
-        drifted, alerts = detector.check_drift(
-            "tool", {"x": 11}, {"status": "ok"}
-        )
+        drifted, alerts = detector.check_drift("tool", {"x": 11}, {"status": "ok"})
         assert not drifted
 
 
@@ -99,9 +97,7 @@ class TestOutputDeterminism:
 
     def test_different_input_different_output_ok(self, detector):
         detector.record_baseline("tool", {"a": 1}, {"result": "one"})
-        drifted, alerts = detector.check_drift(
-            "tool", {"a": 2}, {"result": "two"}
-        )
+        drifted, alerts = detector.check_drift("tool", {"a": 2}, {"result": "two"})
         # Different input, so different output is expected
         assert not any(a.drift_type == "output_changed" for a in alerts)
 
@@ -131,19 +127,13 @@ class TestFieldRemoval:
     def test_always_present_field_disappearing(self, detector):
         # Baseline: 'status' always present
         for i in range(10):
-            detector.record_baseline(
-                "tool", {"x": i}, {"status": "ok", "id": str(i)}
-            )
+            detector.record_baseline("tool", {"x": i}, {"status": "ok", "id": str(i)})
         # Now 'status' disappears
-        drifted, alerts = detector.check_drift(
-            "tool", {"x": 11}, {"id": "999"}
-        )
+        drifted, alerts = detector.check_drift("tool", {"x": 11}, {"id": "999"})
         assert any(a.drift_type == "field_removed" for a in alerts)
 
     def test_no_baseline_no_drift(self, detector):
-        drifted, alerts = detector.check_drift(
-            "brand_new_tool", {"x": 1}, {"y": 2}
-        )
+        drifted, alerts = detector.check_drift("brand_new_tool", {"x": 1}, {"y": 2})
         assert not drifted
         assert alerts == []
 

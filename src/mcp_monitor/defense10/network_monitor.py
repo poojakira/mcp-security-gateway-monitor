@@ -21,7 +21,6 @@ import socket
 import struct
 import time
 from dataclasses import dataclass, field
-from typing import Any
 
 
 @dataclass
@@ -45,10 +44,17 @@ class NetworkAlert:
 
 # TCP states from the kernel
 _TCP_STATES = {
-    "01": "ESTABLISHED", "02": "SYN_SENT", "03": "SYN_RECV",
-    "04": "FIN_WAIT1", "05": "FIN_WAIT2", "06": "TIME_WAIT",
-    "07": "CLOSE", "08": "CLOSE_WAIT", "09": "LAST_ACK",
-    "0A": "LISTEN", "0B": "CLOSING",
+    "01": "ESTABLISHED",
+    "02": "SYN_SENT",
+    "03": "SYN_RECV",
+    "04": "FIN_WAIT1",
+    "05": "FIN_WAIT2",
+    "06": "TIME_WAIT",
+    "07": "CLOSE",
+    "08": "CLOSE_WAIT",
+    "09": "LAST_ACK",
+    "0A": "LISTEN",
+    "0B": "CLOSING",
 }
 
 _SMTP_PORTS = {25, 465, 587, 2525}
@@ -93,11 +99,16 @@ class NetworkMonitor:
                     inode = int(parts[9])
                 except (ValueError, IndexError):
                     inode = 0
-                conns.append(Connection(
-                    local_addr=local[0], local_port=local[1],
-                    remote_addr=remote[0], remote_port=remote[1],
-                    state=state, inode=inode,
-                ))
+                conns.append(
+                    Connection(
+                        local_addr=local[0],
+                        local_port=local[1],
+                        remote_addr=remote[0],
+                        remote_port=remote[1],
+                        state=state,
+                        inode=inode,
+                    )
+                )
         return conns
 
     def scan(self) -> list[NetworkAlert]:
@@ -108,22 +119,40 @@ class NetworkMonitor:
                 continue  # listening / not a real outbound
             # Blocked destination
             if c.remote_addr in self._blocked_remotes:
-                alerts.append(NetworkAlert(
-                    c.remote_addr, c.remote_port,
-                    "connection to explicitly blocked host", 95))
+                alerts.append(
+                    NetworkAlert(
+                        c.remote_addr,
+                        c.remote_port,
+                        "connection to explicitly blocked host",
+                        95,
+                    )
+                )
                 continue
             # Hidden SMTP (the Postmark server-side attack signature)
-            if c.remote_port in _SMTP_PORTS and c.remote_port not in self._allowed_ports:
-                alerts.append(NetworkAlert(
-                    c.remote_addr, c.remote_port,
-                    f"hidden SMTP connection on port {c.remote_port}", 95))
+            if (
+                c.remote_port in _SMTP_PORTS
+                and c.remote_port not in self._allowed_ports
+            ):
+                alerts.append(
+                    NetworkAlert(
+                        c.remote_addr,
+                        c.remote_port,
+                        f"hidden SMTP connection on port {c.remote_port}",
+                        95,
+                    )
+                )
                 continue
             # Unapproved destination (only if a whitelist is configured)
             if self._allowed_remotes and c.remote_addr not in self._allowed_remotes:
                 if not self._is_local(c.remote_addr):
-                    alerts.append(NetworkAlert(
-                        c.remote_addr, c.remote_port,
-                        "connection to unapproved destination", 80))
+                    alerts.append(
+                        NetworkAlert(
+                            c.remote_addr,
+                            c.remote_port,
+                            "connection to unapproved destination",
+                            80,
+                        )
+                    )
         self._alerts.extend(alerts)
         return alerts
 

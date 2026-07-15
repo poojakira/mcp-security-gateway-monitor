@@ -7,14 +7,26 @@ and circuit breaker states. Exposes metrics in Prometheus text exposition format
 from __future__ import annotations
 
 import threading
-import time
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 
 # Default histogram buckets (seconds) targeting p50/p95/p99
 DEFAULT_BUCKETS = (
-    0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75,
-    1.0, 2.5, 5.0, 7.5, 10.0, float("inf"),
+    0.005,
+    0.01,
+    0.025,
+    0.05,
+    0.075,
+    0.1,
+    0.25,
+    0.5,
+    0.75,
+    1.0,
+    2.5,
+    5.0,
+    7.5,
+    10.0,
+    float("inf"),
 )
 
 
@@ -99,38 +111,27 @@ class MetricsCollector:
             lines: List[str] = []
 
             # request_total counter
-            lines.append(
-                "# HELP mcp_request_total Total number of requests."
-            )
+            lines.append("# HELP mcp_request_total Total number of requests.")
             lines.append("# TYPE mcp_request_total counter")
             lines.append(f"mcp_request_total {self._request_total}")
 
             # Per-endpoint counters
-            for endpoint, count in sorted(
-                self._request_total_by_endpoint.items()
-            ):
-                lines.append(
-                    f'mcp_request_total{{endpoint="{endpoint}"}} {count}'
-                )
+            for endpoint, count in sorted(self._request_total_by_endpoint.items()):
+                lines.append(f'mcp_request_total{{endpoint="{endpoint}"}} {count}')
 
             # error_total counter
-            lines.append(
-                "# HELP mcp_error_total Total number of errors."
-            )
+            lines.append("# HELP mcp_error_total Total number of errors.")
             lines.append("# TYPE mcp_error_total counter")
             lines.append(f"mcp_error_total {self._error_total}")
 
             # active_requests gauge
-            lines.append(
-                "# HELP mcp_active_requests Current in-flight requests."
-            )
+            lines.append("# HELP mcp_active_requests Current in-flight requests.")
             lines.append("# TYPE mcp_active_requests gauge")
             lines.append(f"mcp_active_requests {self._active_requests}")
 
             # request_duration_seconds histogram
             lines.append(
-                "# HELP mcp_request_duration_seconds "
-                "Request duration histogram."
+                "# HELP mcp_request_duration_seconds " "Request duration histogram."
             )
             lines.append("# TYPE mcp_request_duration_seconds histogram")
             cumulative = 0
@@ -146,12 +147,8 @@ class MetricsCollector:
                         f'mcp_request_duration_seconds_bucket{{le="{bound}"}} '
                         f"{cumulative}"
                     )
-            lines.append(
-                f"mcp_request_duration_seconds_sum {self._duration_sum}"
-            )
-            lines.append(
-                f"mcp_request_duration_seconds_count {self._duration_count}"
-            )
+            lines.append(f"mcp_request_duration_seconds_sum {self._duration_sum}")
+            lines.append(f"mcp_request_duration_seconds_count {self._duration_count}")
 
             # circuit_breaker_state
             if self._circuit_states:
@@ -163,9 +160,7 @@ class MetricsCollector:
                 state_map = {"closed": 0, "open": 1, "half_open": 2}
                 for name, state in sorted(self._circuit_states.items()):
                     val = state_map.get(state, -1)
-                    lines.append(
-                        f'mcp_circuit_breaker_state{{layer="{name}"}} {val}'
-                    )
+                    lines.append(f'mcp_circuit_breaker_state{{layer="{name}"}} {val}')
 
             lines.append("")  # Trailing newline
             return "\n".join(lines)

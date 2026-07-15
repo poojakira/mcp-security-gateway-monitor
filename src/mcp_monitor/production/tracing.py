@@ -184,9 +184,7 @@ class Tracer:
         }
 
     @staticmethod
-    def create_traceparent(
-        trace_id: str, span_id: str, sampled: bool = True
-    ) -> str:
+    def create_traceparent(trace_id: str, span_id: str, sampled: bool = True) -> str:
         """Create a W3C traceparent header value.
 
         Parameters
