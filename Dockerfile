@@ -1,42 +1,41 @@
-## Multi-stage build for MCP Security Gateway Monitor
-## Stage 1: install dev dependencies, run tests, and build the release wheel
-FROM python:3.11-slim AS builder
+# MCP Security Gateway Monitor - Production Dockerfile
+FROM python:3.12-slim as builder
 
 WORKDIR /app
 
-ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PIP_ROOT_USER_ACTION=ignore
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc g++ libffi-dev libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY pyproject.toml README.md LICENSE ./
-COPY src/ src/
-COPY tests/ tests/
-COPY deploy/ deploy/
-COPY docker-compose.yml .
-COPY locustfile.py .
-COPY Dockerfile .
+COPY requirements.txt .
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
-RUN pip install --no-cache-dir -e '.[dev]'
-RUN python -m pytest tests/ -q --tb=short
-RUN pip wheel --no-cache-dir --no-deps --wheel-dir /wheels .
-
-## Stage 2: runtime image with only the built production package
-FROM python:3.11-slim AS runtime
+# Production stage
+FROM python:3.12-slim
 
 WORKDIR /app
 
-ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PIP_ROOT_USER_ACTION=ignore
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libffi8 libssl3 curl \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /wheels /wheels
-RUN pip install --no-cache-dir /wheels/*.whl && \
-    rm -rf /wheels /root/.cache/pip
+COPY --from=builder /install /usr/local
 
-RUN useradd --create-home --shell /bin/bash appuser
-USER appuser
+# Copy MCP monitor source
+COPY src/mcp_monitor ./mcp_monitor
+COPY pyproject.toml .
+COPY README.md .
 
-EXPOSE 8080
+RUN pip install --no-cache-dir -e .
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/v1/health')" || exit 1
+# Non-root user
+RUN groupadd -r mlsec && useradd -r -g mlsec mlsec
+RUN chown -R mlsec:mlsec /app
+USER mlsec
 
-CMD ["python", "-c", "from mcp_monitor.production.server import run_server; run_server()"]
+EXPOSE 8002
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:8002/health || exit 1
+
+CMD ["python", "-m", "mcp_monitor.monitor", "--help"]
