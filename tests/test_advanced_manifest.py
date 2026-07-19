@@ -1,7 +1,6 @@
 """Tests for manifest signing and verification — 15 tests."""
 
 import pytest
-
 from mcp_monitor.advanced.manifest import (
     ManifestSigner,
     ManifestVerifier,

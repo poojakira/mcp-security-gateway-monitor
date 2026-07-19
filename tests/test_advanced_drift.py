@@ -1,8 +1,7 @@
 """Tests for behavioral drift detection — 15 tests."""
 
 import pytest
-
-from mcp_monitor.advanced.drift import BehavioralDriftDetector, DriftAlert
+from mcp_monitor.advanced.drift import BehavioralDriftDetector
 
 
 @pytest.fixture

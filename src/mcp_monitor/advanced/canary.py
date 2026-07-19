@@ -27,10 +27,9 @@ from enum import Enum
 from typing import Any, Callable
 
 
-
 class CanaryStatus(Enum):
     """Status of a canary probe result."""
-    PASS = "pass"
+    PASS = "pass"  # nosec: B105 - enum value, not password
     FAIL = "fail"
     DRIFT = "drift"      # Output changed but not critically
     TIMEOUT = "timeout"

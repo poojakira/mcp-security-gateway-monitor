@@ -13,7 +13,6 @@ import base64
 import re
 from typing import Any
 
-
 # Suspicious URL patterns (attacker infrastructure indicators)
 _SUSPICIOUS_URL_PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"https?://\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}"),  # raw IP
@@ -80,7 +79,7 @@ class ExfiltrationDetector:
                         f"large base64 blob detected ({len(decoded)} bytes decoded)"
                     )
                     break
-            except Exception:
+            except Exception:  # nosec: B110 - invalid base64 is expected, continue scanning
                 pass
 
         # 4. Suspicious URLs

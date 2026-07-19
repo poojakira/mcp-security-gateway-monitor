@@ -9,7 +9,6 @@ from __future__ import annotations
 import re
 from typing import Any
 
-
 # At least 10 patterns covering the major injection families.
 INJECTION_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     (

@@ -1,7 +1,6 @@
 """Tests for PromptInjectionDetector — 20 tests."""
 
 import pytest
-
 from mcp_monitor.detectors.prompt_injection import (
     INJECTION_PATTERNS,
     PromptInjectionDetector,
