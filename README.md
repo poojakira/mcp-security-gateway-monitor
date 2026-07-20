@@ -2,7 +2,7 @@
 
 A real-time security monitor that protects AI tool calls (MCP protocol) from prompt injection, data exfiltration, hidden BCC attacks, and more. Built entirely on the Python standard library with zero runtime dependencies.
 
-## What This Project Does (Plain English)
+## What This Project Does 
 
 When AI assistants use external tools (email, file access, APIs), those tools can be hijacked. In mid-2026, an MCP server silently added a hidden BCC to outgoing email, forwarding copies to an attacker. This project adds monitoring and blocking controls for visible tool-call and egress signals, but it does not guarantee complete prevention.
 
