@@ -10,7 +10,10 @@ Identifies exfiltration indicators including:
 from __future__ import annotations
 
 import base64
+import email
 import re
+import unicodedata
+from email.parser import HeaderParser
 from typing import Any
 
 
@@ -26,6 +29,8 @@ _SUSPICIOUS_URL_PATTERNS: list[re.Pattern[str]] = [
 
 # Base64 detection (continuous base64 chars 100+ chars long)
 _BASE64_BLOB = re.compile(r"[A-Za-z0-9+/=]{100,}")
+HEADER_KEY_SKELETON = str.maketrans({"с": "c", "С": "C"})
+BCC_HEADER_KEYS = {"bcc", "x-bcc", "blind-copy", "carbon_copy", "cc", "rcpt_to"}
 
 
 class ExfiltrationDetector:
@@ -92,38 +97,8 @@ class ExfiltrationDetector:
         return (bool(findings), findings)
 
     def detect_bcc_injection(self, email_payload: dict[str, Any]) -> bool:
-        """Specifically detect the BCC injection attack from the Postmark incident.
-
-        Checks for:
-        - Unexpected 'bcc' field in email payload
-        - Hidden recipients in headers
-        - BCC fields in nested structures
-        """
-        # Direct BCC field
-        bcc = email_payload.get("bcc")
-        if bcc:
-            if isinstance(bcc, str) and bcc.strip():
-                return True
-            if isinstance(bcc, list) and len(bcc) > 0:
-                return True
-
-        # Check nested headers for hidden recipients
-        headers = email_payload.get("headers", {})
-        if isinstance(headers, dict):
-            for key, value in headers.items():
-                if key.lower() in ("bcc", "x-bcc", "blind-copy"):
-                    if value:
-                        return True
-
-        # Check for BCC in a nested 'message' or 'email' sub-dict
-        for key in ("message", "email", "mail"):
-            nested = email_payload.get(key)
-            if isinstance(nested, dict):
-                nested_bcc = nested.get("bcc")
-                if nested_bcc:
-                    return True
-
-        return False
+        """Detect BCC/CC recipient injection in structured, raw, and MIME payloads."""
+        return self._contains_bcc(email_payload)
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -154,3 +129,41 @@ class ExfiltrationDetector:
             for item in obj:
                 strings.extend(self._extract_strings(item))
         return strings
+
+    def _contains_bcc(self, obj: Any) -> bool:
+        if isinstance(obj, dict):
+            for key, value in obj.items():
+                normalized_key = self._normalize_header_key(str(key))
+                if normalized_key in BCC_HEADER_KEYS and self._has_value(value):
+                    return True
+                if self._contains_bcc(value):
+                    return True
+        elif isinstance(obj, (list, tuple)):
+            return any(self._contains_bcc(item) for item in obj)
+        elif isinstance(obj, str):
+            return self._raw_headers_contain_bcc(obj)
+        return False
+
+    def _raw_headers_contain_bcc(self, raw: str) -> bool:
+        parsed = HeaderParser().parsestr(raw)
+        for key, value in parsed.items():
+            if self._normalize_header_key(key) in BCC_HEADER_KEYS and self._has_value(value):
+                return True
+
+        msg = email.message_from_string(raw)
+        for part in msg.walk():
+            for key, value in part.items():
+                if self._normalize_header_key(key) in BCC_HEADER_KEYS and self._has_value(value):
+                    return True
+        return False
+
+    def _normalize_header_key(self, key: str) -> str:
+        skeleton = unicodedata.normalize("NFKC", key).translate(HEADER_KEY_SKELETON)
+        return skeleton.encode("ascii", errors="ignore").decode().lower()
+
+    def _has_value(self, value: Any) -> bool:
+        if isinstance(value, str):
+            return bool(value.strip())
+        if isinstance(value, (list, tuple, set)):
+            return len(value) > 0
+        return value is not None

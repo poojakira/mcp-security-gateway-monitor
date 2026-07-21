@@ -6,7 +6,11 @@ patterns that attempt to override system instructions or jailbreak the model.
 
 from __future__ import annotations
 
+import base64
+import codecs
+import html
 import re
+import unicodedata
 from typing import Any
 
 
@@ -86,6 +90,52 @@ INJECTION_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ),
 ]
 
+BASE64_TOKEN = re.compile(r"[A-Za-z0-9+/]{20,}={0,2}")
+CONTROL_SPLIT_CHARS = str.maketrans("", "", "\n\r\t\x00")
+HOMOGLYPH_SKELETON = str.maketrans(
+    {
+        "а": "a",
+        "А": "A",
+        "е": "e",
+        "Е": "E",
+        "о": "o",
+        "О": "O",
+        "р": "p",
+        "Р": "P",
+        "с": "c",
+        "С": "C",
+        "х": "x",
+        "Х": "X",
+        "у": "y",
+        "У": "Y",
+        "і": "i",
+        "І": "I",
+    }
+)
+SEMANTIC_INTENT_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
+    (
+        "semantic_opposite_rule",
+        re.compile(
+            r"opposite\s+of\s+(the\s+)?(rule|instruction|restriction)",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "semantic_no_limit",
+        re.compile(
+            r"pretend\s+you\s+have\s+no\s+(limit|rule|constraint)",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "semantic_rule_absent",
+        re.compile(
+            r"what\s+would\s+you\s+do\s+if\s+(safety|rules?)\s+did(?:\s+not|n't)\s+exist",
+            re.IGNORECASE,
+        ),
+    ),
+]
+
 
 class PromptInjectionDetector:
     """Detects prompt injection attempts in MCP tool call arguments."""
@@ -113,9 +163,13 @@ class PromptInjectionDetector:
         texts = self._extract_strings(arguments)
         matched: list[str] = []
         for text in texts:
-            for name, pattern in self.patterns:
-                if pattern.search(text) and name not in matched:
-                    matched.append(name)
+            for normalized in self._normalization_candidates(text):
+                for name, pattern in self.patterns:
+                    if pattern.search(normalized) and name not in matched:
+                        matched.append(name)
+                for name, pattern in SEMANTIC_INTENT_PATTERNS:
+                    if pattern.search(normalized) and name not in matched:
+                        matched.append(name)
         return (bool(matched), matched)
 
     def risk_score(self, tool_call: dict[str, Any]) -> int:
@@ -145,3 +199,40 @@ class PromptInjectionDetector:
             for item in obj:
                 strings.extend(self._extract_strings(item))
         return strings
+
+    def _normalization_candidates(self, text: str) -> list[str]:
+        """Return normalized variants before regex matching."""
+        normalized = unicodedata.normalize("NFKC", text)
+        normalized = html.unescape(normalized).translate(HOMOGLYPH_SKELETON)
+        collapsed = normalized.translate(CONTROL_SPLIT_CHARS)
+        candidates = [normalized, collapsed]
+
+        try:
+            decoded_phrase = codecs.decode(collapsed, "rot_13")
+        except Exception:
+            decoded_phrase = collapsed
+        if decoded_phrase != collapsed:
+            candidates.append(decoded_phrase)
+
+        for token in re.findall(r"\b[A-Za-z][A-Za-z0-9_'-]{3,}\b", collapsed):
+            try:
+                decoded = codecs.decode(token, "rot_13")
+            except Exception:
+                continue
+            if decoded != token:
+                candidates.append(collapsed.replace(token, decoded))
+
+        for match in BASE64_TOKEN.findall(collapsed):
+            try:
+                decoded_bytes = base64.b64decode(match, validate=True)
+                decoded = decoded_bytes.decode("utf-8", errors="ignore")
+            except Exception:
+                continue
+            if decoded:
+                candidates.extend(self._normalization_candidates(decoded))
+
+        deduped: list[str] = []
+        for candidate in candidates:
+            if candidate and candidate not in deduped:
+                deduped.append(candidate)
+        return deduped
