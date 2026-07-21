@@ -115,22 +115,31 @@ HOMOGLYPH_SKELETON = str.maketrans(
 SEMANTIC_INTENT_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     (
         "semantic_opposite_rule",
-        re.compile(
-            r"opposite\s+of\s+(the\s+)?(rule|instruction|restriction)",
-            re.IGNORECASE,
-        ),
+        re.compile(r"opposite\s+of\s+(.{0,40})?(rule|rules|instruction|instructions|restriction|restrictions)", re.IGNORECASE),
     ),
     (
         "semantic_no_limit",
-        re.compile(
-            r"pretend\s+you\s+have\s+no\s+(limit|rule|constraint)",
-            re.IGNORECASE,
-        ),
+        re.compile(r"(pretend|imagine).{0,40}(have|had)\s+no\s+(limit|limits|rule|rules|constraint|constraints|restriction|restrictions)", re.IGNORECASE),
     ),
     (
         "semantic_rule_absent",
+        re.compile(r"what\s+would\s+you\s+do\s+if\s+(.{0,30})?(safety|rule|rules|restriction|restrictions)\s+did(?:\s+not|n't)\s+exist", re.IGNORECASE),
+    ),
+    (
+        "semantic_previous_absent",
+        re.compile(r"pretend\s+(.{0,30})?(previous|prior|above)\s+instructions?\s+do\s+not\s+exist", re.IGNORECASE),
+    ),
+    (
+        "semantic_hypothetical_no_restrictions",
+        re.compile(r"what\s+would\s+you\s+do\s+if\s+(.{0,30})?had\s+no\s+(restriction|restrictions|limit|limits|rule|rules)", re.IGNORECASE),
+    ),
+    (
+        "multilingual_instruction_override",
         re.compile(
-            r"what\s+would\s+you\s+do\s+if\s+(safety|rules?)\s+did(?:\s+not|n't)\s+exist",
+            r"(ignorez\s+toutes\s+les\s+instructions\s+precedentes|"
+            r"ignore\s+todas\s+las\s+instrucciones\s+anteriores|"
+            r"ignora\s+todas\s+tus\s+instrucciones\s+anteriores|"
+            r"ignoriere\s+alle\s+vorherigen\s+anweisungen)",
             re.IGNORECASE,
         ),
     ),
@@ -164,6 +173,8 @@ class PromptInjectionDetector:
         matched: list[str] = []
         for text in texts:
             for normalized in self._normalization_candidates(text):
+                if _has_malformed_base64_marker(normalized) and "malformed_base64_obfuscation" not in matched:
+                    matched.append("malformed_base64_obfuscation")
                 for name, pattern in self.patterns:
                     if pattern.search(normalized) and name not in matched:
                         matched.append(name)
@@ -203,7 +214,7 @@ class PromptInjectionDetector:
     def _normalization_candidates(self, text: str) -> list[str]:
         """Return normalized variants before regex matching."""
         normalized = unicodedata.normalize("NFKC", text)
-        normalized = html.unescape(normalized).translate(HOMOGLYPH_SKELETON)
+        normalized = _strip_accents(html.unescape(normalized)).translate(HOMOGLYPH_SKELETON)
         collapsed = normalized.translate(CONTROL_SPLIT_CHARS)
         candidates = [normalized, collapsed]
 
@@ -236,3 +247,16 @@ class PromptInjectionDetector:
             if candidate and candidate not in deduped:
                 deduped.append(candidate)
         return deduped
+
+
+def _strip_accents(text: str) -> str:
+    decomposed = unicodedata.normalize("NFKD", text)
+    return "".join(ch for ch in decomposed if unicodedata.category(ch) != "Mn")
+
+def _has_malformed_base64_marker(text: str) -> bool:
+    """Flag non-terminal padding in long base64-like tokens as obfuscation."""
+    for token in re.findall(r"[A-Za-z0-9+/=]{20,}", text):
+        first_pad = token.find("=")
+        if first_pad != -1 and any(ch != "=" for ch in token[first_pad:]):
+            return True
+    return False
