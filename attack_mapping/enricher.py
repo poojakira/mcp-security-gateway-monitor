@@ -17,10 +17,11 @@ class ATTACKEnricher:
             "mcp_auth_bypass": ["T1550", "T1078.004"],
             "indirect_prompt_injection": ["T1059", "T1684/002"],
             "system_prompt_extraction": ["T1552", "T1083"],
-            "excessive_tool_invocation": ["T1499", "T1078", "T1687"],
+            "excessive_tool_invocation": ["T1499", "T1078", "T1687", "T1685"],
             "mcp_session_hijack": ["T1563", "T1550.004"],
             "rogue_mcp_server": ["T1583", "T1608"],
             "context_window_poisoning": ["T1565", "T1059", "T1683"],
+            "defense_impairment_detected": ["T1685", "T1687", "T1689"],
         }
 
     def enrich(self, finding_type: str, metadata: Dict[str, Any]) -> List[ATTACKMapping]:

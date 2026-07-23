@@ -1,3 +1,9 @@
+# mcp-security-gateway-monitor
+
+[![CI](https://github.com/poojakira/mcp-security-gateway-monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/poojakira/mcp-security-gateway-monitor/actions/workflows/ci.yml)
+[![Python >=3.10](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ## MITRE ATT&CK v19 Coverage
 
 This repository maps all security findings to [MITRE ATT&CK v19](https://attack.mitre.org/).

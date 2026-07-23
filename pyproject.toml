@@ -7,7 +7,7 @@ name = "mcp-security-gateway-monitor"
 version = "0.1.0"
 description = "Security monitor for MCP tool calls with detector orchestration and immutable audit logging."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = []
 
 [project.optional-dependencies]
