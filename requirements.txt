@@ -1,4 +1,4 @@
-attack-v19-core @ git+https://github.com/poojakira/attack-v19-core.git
+attack-v19-core @ git+https://github.com/poojakira/attack-v19-core.git@1.0.0
 mitreattack-python==3.0.3
 stix2==3.0.1
 pydantic==2.7.4
