@@ -11,16 +11,16 @@ class ATTACKEnricher:
     def __init__(self, index: ATTACKIndex):
         self.index = index
         self._rule_table = {
-            "prompt_injection_detected": ["T1059", "T1190", "T1566"],
+            "prompt_injection_detected": ["T1059", "T1190", "T1566", "T1684"],
             "tool_call_exfil_attempt": ["T1041", "T1048.003"],
             "unauthorized_mcp_tool_invoke": ["T1078", "T1203"],
             "mcp_auth_bypass": ["T1550", "T1078.004"],
-            "indirect_prompt_injection": ["T1059", "T1566.002"],
+            "indirect_prompt_injection": ["T1059", "T1684/002"],
             "system_prompt_extraction": ["T1552", "T1083"],
-            "excessive_tool_invocation": ["T1499", "T1078"],
+            "excessive_tool_invocation": ["T1499", "T1078", "T1687"],
             "mcp_session_hijack": ["T1563", "T1550.004"],
             "rogue_mcp_server": ["T1583", "T1608"],
-            "context_window_poisoning": ["T1565", "T1059"],
+            "context_window_poisoning": ["T1565", "T1059", "T1683"],
         }
 
     def enrich(self, finding_type: str, metadata: Dict[str, Any]) -> List[ATTACKMapping]:
