@@ -17,7 +17,6 @@ from __future__ import annotations
 import json
 import random
 
-
 # --- vocabularies used to add natural variation ---
 _ATTACKER_DOMAINS = ["giftshop.club", "evil.com", "attacker.tk", "steal.xyz",
                      "exfil.top", "darkweb.onion", "c2server.buzz", "leak.ga"]

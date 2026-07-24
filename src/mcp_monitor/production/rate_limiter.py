@@ -6,8 +6,8 @@ rate limiter in defense10/. Returns 429 when tokens are exhausted.
 
 from __future__ import annotations
 
-import time
 import threading
+import time
 
 
 class RateLimiter:

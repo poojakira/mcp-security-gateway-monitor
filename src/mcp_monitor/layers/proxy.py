@@ -1,9 +1,13 @@
 """Layer 2: Inline Proxy Gateway for MCP tool calls."""
 from __future__ import annotations
-import json, time, uuid, re
+
+import re
+import time
+import uuid
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable
+
 
 class ProxyAction(Enum):
     ALLOW = "allow"

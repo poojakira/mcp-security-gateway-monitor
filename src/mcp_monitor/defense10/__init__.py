@@ -10,13 +10,13 @@ These are REAL, FUNCTIONAL implementations (not policy stubs):
 - orchestrator10: unifies everything with the existing 5 layers
 """
 
-from mcp_monitor.defense10.ml_classifier import MLThreatClassifier
-from mcp_monitor.defense10.rate_limiter import RateLimiter, RecipientWhitelist
+from mcp_monitor.defense10.egress_proxy import EgressInspector, IntentRegistry
 from mcp_monitor.defense10.honeypot import HoneypotVault
-from mcp_monitor.defense10.sandbox import DockerSandbox, SandboxConfig
+from mcp_monitor.defense10.ml_classifier import MLThreatClassifier
 from mcp_monitor.defense10.network_monitor import NetworkMonitor
-from mcp_monitor.defense10.egress_proxy import IntentRegistry, EgressInspector
 from mcp_monitor.defense10.orchestrator10 import Defense10, Verdict10
+from mcp_monitor.defense10.rate_limiter import RateLimiter, RecipientWhitelist
+from mcp_monitor.defense10.sandbox import DockerSandbox, SandboxConfig
 
 __all__ = [
     "MLThreatClassifier",

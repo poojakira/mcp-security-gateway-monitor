@@ -23,7 +23,7 @@ import hashlib
 import hmac
 import json
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from typing import Any
 
 

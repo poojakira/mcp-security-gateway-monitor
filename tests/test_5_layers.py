@@ -1,12 +1,15 @@
 """Tests for 5-Layer Defense System — 72 tests."""
-import base64, pytest
+import base64
+
+import pytest
 from mcp_monitor.audit.log import AuditLog
-from mcp_monitor.monitor import MCPSecurityMonitor
-from mcp_monitor.layers.proxy import InlineProxyGateway, ProxyAction, ProxyRule
-from mcp_monitor.layers.kernel import KernelMonitor, ServerPolicy, SyscallEvent, SyscallType
-from mcp_monitor.layers.semantic import SemanticIntentAnalyzer
 from mcp_monitor.layers.egress import EgressRule, NetworkEgressPolicy
+from mcp_monitor.layers.kernel import KernelMonitor, ServerPolicy, SyscallEvent, SyscallType
 from mcp_monitor.layers.orchestrator import FiveLayerDefense
+from mcp_monitor.layers.proxy import InlineProxyGateway, ProxyAction, ProxyRule
+from mcp_monitor.layers.semantic import SemanticIntentAnalyzer
+from mcp_monitor.monitor import MCPSecurityMonitor
+
 
 # === LAYER 2: PROXY TESTS (15) ===
 class TestProxy:

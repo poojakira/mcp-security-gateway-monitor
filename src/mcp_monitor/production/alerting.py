@@ -9,8 +9,8 @@ from __future__ import annotations
 import json
 import threading
 import time
-import urllib.request
 import urllib.error
+import urllib.request
 from typing import Any, Optional
 
 from mcp_monitor.production.logging import get_logger

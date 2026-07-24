@@ -13,7 +13,6 @@ import base64
 import re
 from typing import Any
 
-
 # Suspicious URL patterns (attacker infrastructure indicators)
 _SUSPICIOUS_URL_PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"https?://\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}"),  # raw IP

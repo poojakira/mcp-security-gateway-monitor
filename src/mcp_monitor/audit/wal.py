@@ -13,7 +13,6 @@ import os
 import tempfile
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any
 
 from mcp_monitor.audit.log import AuditEntry
 

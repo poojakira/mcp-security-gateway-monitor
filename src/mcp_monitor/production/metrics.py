@@ -7,9 +7,7 @@ and circuit breaker states. Exposes metrics in Prometheus text exposition format
 from __future__ import annotations
 
 import threading
-import time
-from typing import Dict, List, Optional
-
+from typing import Dict, List
 
 # Default histogram buckets (seconds) targeting p50/p95/p99
 DEFAULT_BUCKETS = (

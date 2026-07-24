@@ -1,10 +1,12 @@
 """Layer 3: Kernel-level monitoring for MCP server behavior."""
 from __future__ import annotations
+
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
+
 
 class SyscallType(Enum):
     NETWORK_CONNECT = "network_connect"

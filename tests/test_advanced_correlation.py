@@ -1,14 +1,10 @@
 """Tests for cross-tool correlation engine — 15 tests."""
 
-import time
 
 import pytest
-
 from mcp_monitor.advanced.correlation import (
-    CorrelationAlert,
     CorrelationRule,
     CrossToolCorrelationEngine,
-    ToolCallEvent,
 )
 
 

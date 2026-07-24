@@ -19,6 +19,7 @@ Each payload is a dict with:
 """
 
 from __future__ import annotations
+
 from typing import Any
 
 ATTACK_CATALOG: list[dict[str, Any]] = [

@@ -1,13 +1,11 @@
 """Tests for invariant enforcement — 15 tests."""
 
 import pytest
-
 from mcp_monitor.advanced.invariants import (
     BUILTIN_INVARIANTS,
     Invariant,
     InvariantEnforcer,
     InvariantType,
-    InvariantViolation,
 )
 
 

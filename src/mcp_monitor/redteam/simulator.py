@@ -10,7 +10,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-from mcp_monitor.layers.kernel import KernelMonitor, SyscallEvent, SyscallType
+from mcp_monitor.layers.kernel import SyscallEvent, SyscallType
 from mcp_monitor.layers.orchestrator import FiveLayerDefense
 from mcp_monitor.redteam.payloads import ATTACK_CATALOG
 

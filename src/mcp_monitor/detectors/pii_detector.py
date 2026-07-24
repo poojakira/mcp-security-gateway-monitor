@@ -10,7 +10,6 @@ from __future__ import annotations
 import re
 from typing import Any
 
-
 # Minimum 8 PII types.
 PII_PATTERNS: dict[str, re.Pattern[str]] = {
     "email": re.compile(

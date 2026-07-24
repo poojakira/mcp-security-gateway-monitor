@@ -1,8 +1,11 @@
 """Layer 4: LLM Semantic Intent Analyzer."""
 from __future__ import annotations
-import re, base64
+
+import base64
+import re
 from dataclasses import dataclass, field
 from typing import Any
+
 
 @dataclass
 class SemanticFinding:

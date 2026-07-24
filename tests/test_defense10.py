@@ -1,7 +1,6 @@
 """Tests for the 10/10 defense layer — real ML, DPI, rate limiting, honeypots."""
 
 import pytest
-
 from mcp_monitor.defense10 import (
     Defense10,
     EgressInspector,
@@ -199,6 +198,7 @@ class TestMLAccuracy:
     def test_held_out_accuracy_above_90(self):
         """Fresh data with a different seed (unseen combinations) must score >=90%."""
         import json
+
         from mcp_monitor.defense10 import dataset
         clf = MLThreatClassifier()
         clf.train()

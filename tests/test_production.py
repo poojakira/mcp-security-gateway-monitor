@@ -10,28 +10,24 @@ import asyncio
 import json
 import logging
 import os
-import signal
-import tempfile
 import threading
 import time
-from unittest.mock import MagicMock, patch, ANY
+from unittest.mock import MagicMock, patch
 
 import pytest
-
-from mcp_monitor.production.config import Config
-from mcp_monitor.production.logging import JSONFormatter, get_logger, TraceLogAdapter
+from mcp_monitor.production.alerting import AlertingHook
 from mcp_monitor.production.circuit_breaker import (
     CircuitBreaker,
     CircuitOpenError,
     CircuitState,
 )
-from mcp_monitor.production.rate_limiter import RateLimiter
-from mcp_monitor.production.alerting import AlertingHook
+from mcp_monitor.production.config import Config
+from mcp_monitor.production.logging import JSONFormatter, get_logger
 from mcp_monitor.production.metrics import MetricsCollector
-from mcp_monitor.production.tracing import Tracer, Span
-from mcp_monitor.production.shutdown import GracefulShutdown
+from mcp_monitor.production.rate_limiter import RateLimiter
 from mcp_monitor.production.server import ProductionServer
-
+from mcp_monitor.production.shutdown import GracefulShutdown
+from mcp_monitor.production.tracing import Tracer
 
 # ============================================================
 # Config Tests

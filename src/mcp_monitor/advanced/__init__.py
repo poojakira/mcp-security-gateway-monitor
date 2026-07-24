@@ -23,11 +23,11 @@ This module addresses the 5 critical gaps left open by the protocol designers:
    compromise between audit windows.
 """
 
-from mcp_monitor.advanced.manifest import ManifestSigner, ManifestVerifier
-from mcp_monitor.advanced.drift import BehavioralDriftDetector
+from mcp_monitor.advanced.canary import CanaryResult, ToolCanary
 from mcp_monitor.advanced.correlation import CrossToolCorrelationEngine
-from mcp_monitor.advanced.invariants import InvariantEnforcer, Invariant
-from mcp_monitor.advanced.canary import ToolCanary, CanaryResult
+from mcp_monitor.advanced.drift import BehavioralDriftDetector
+from mcp_monitor.advanced.invariants import Invariant, InvariantEnforcer
+from mcp_monitor.advanced.manifest import ManifestSigner, ManifestVerifier
 
 __all__ = [
     "ManifestSigner",

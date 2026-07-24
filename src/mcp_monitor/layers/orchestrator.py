@@ -1,12 +1,16 @@
 """Unified 5-Layer Defense Orchestrator."""
 from __future__ import annotations
-import time, uuid
+
+import time
+import uuid
 from dataclasses import dataclass, field
 from typing import Any
-from mcp_monitor.layers.proxy import InlineProxyGateway, ProxyAction
-from mcp_monitor.layers.kernel import KernelMonitor, SyscallEvent
-from mcp_monitor.layers.semantic import SemanticIntentAnalyzer
+
 from mcp_monitor.layers.egress import NetworkEgressPolicy
+from mcp_monitor.layers.kernel import KernelMonitor, SyscallEvent
+from mcp_monitor.layers.proxy import InlineProxyGateway, ProxyAction
+from mcp_monitor.layers.semantic import SemanticIntentAnalyzer
+
 
 @dataclass
 class LayerResult:

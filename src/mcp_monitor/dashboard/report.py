@@ -1,7 +1,10 @@
 """HTML Security Report Generator — deep-level dashboard."""
 from __future__ import annotations
+
 import time
+
 from mcp_monitor.redteam.simulator import SimulationReport
+
 
 class HTMLReportGenerator:
     """Generates an HTML security dashboard from simulation results."""

@@ -17,8 +17,8 @@ from __future__ import annotations
 
 import re
 
-from sklearn.base import BaseEstimator, TransformerMixin
 import numpy as np
+from sklearn.base import BaseEstimator, TransformerMixin
 
 _EMAIL = re.compile(r"[a-zA-Z0-9._%+\-]+@([a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})")
 _IP_URL = re.compile(r"https?://\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}")

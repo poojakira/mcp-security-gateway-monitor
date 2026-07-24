@@ -1,7 +1,6 @@
 """Tests for PIIDetector — 25 tests."""
 
 import pytest
-
 from mcp_monitor.detectors.pii_detector import PII_PATTERNS, PIIDetector
 
 

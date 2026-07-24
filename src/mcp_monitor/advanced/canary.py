@@ -27,7 +27,6 @@ from enum import Enum
 from typing import Any, Callable
 
 
-
 class CanaryStatus(Enum):
     """Status of a canary probe result."""
     PASS = "pass"

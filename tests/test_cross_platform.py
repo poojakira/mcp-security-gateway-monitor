@@ -16,14 +16,8 @@ What it validates:
     - No platform-specific behavior
 """
 
-import json
 import os
 import sys
-import tempfile
-import time
-from pathlib import Path
-
-import pytest
 
 from mcp_monitor.audit.log import AuditLog
 from mcp_monitor.audit.wal import WriteAheadLog

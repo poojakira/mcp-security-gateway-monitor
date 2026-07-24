@@ -23,11 +23,11 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
-from mcp_monitor.defense10.ml_classifier import MLThreatClassifier
-from mcp_monitor.defense10.rate_limiter import RateLimiter, RecipientWhitelist
+from mcp_monitor.defense10.egress_proxy import EgressInspector, IntentRegistry
 from mcp_monitor.defense10.honeypot import HoneypotVault
-from mcp_monitor.defense10.egress_proxy import IntentRegistry, EgressInspector
+from mcp_monitor.defense10.ml_classifier import MLThreatClassifier
 from mcp_monitor.defense10.network_monitor import NetworkMonitor
+from mcp_monitor.defense10.rate_limiter import RateLimiter, RecipientWhitelist
 
 
 @dataclass

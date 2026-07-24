@@ -170,11 +170,12 @@ class MLThreatClassifier:
         benign: list[str] | None = None,
     ) -> dict[str, Any]:
         """Train the classifier. Returns training metrics."""
-        from sklearn.pipeline import Pipeline, FeatureUnion
+        import numpy as np
         from sklearn.feature_extraction.text import TfidfVectorizer
         from sklearn.linear_model import LogisticRegression
         from sklearn.model_selection import cross_val_score
-        import numpy as np
+        from sklearn.pipeline import FeatureUnion, Pipeline
+
         from mcp_monitor.defense10.features import StructuralFeatures
 
         if malicious is not None:
@@ -263,8 +264,8 @@ class MLThreatClassifier:
 
     def save(self, path: str) -> None:
         """Persist the trained model to disk with integrity verification."""
-        import pickle
         import hashlib as _hl
+        import pickle
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         data = pickle.dumps(self._pipeline)
         integrity = _hl.sha256(data).hexdigest()
@@ -279,8 +280,8 @@ class MLThreatClassifier:
         Refuses to load if the SHA-256 checksum doesn't match, preventing
         arbitrary code execution via tampered pickle files.
         """
-        import pickle
         import hashlib as _hl
+        import pickle
         if not os.path.exists(path):
             return False
         checksum_path = path + ".sha256"

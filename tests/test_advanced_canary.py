@@ -1,10 +1,8 @@
 """Tests for tool canary system — 15 tests."""
 
 import pytest
-
 from mcp_monitor.advanced.canary import (
     CanaryProbe,
-    CanaryResult,
     CanaryStatus,
     ToolCanary,
 )

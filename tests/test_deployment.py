@@ -4,10 +4,10 @@ Validates Dockerfile, docker-compose.yml, Kubernetes manifests,
 and locustfile.py for correctness and required content.
 """
 
-import os
 import ast
+import os
+
 import yaml
-import pytest
 
 # All paths relative to project root
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

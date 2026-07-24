@@ -7,8 +7,8 @@ then probing with half-open state after a timeout.
 from __future__ import annotations
 
 import enum
-import time
 import threading
+import time
 from typing import Any, Callable, Optional
 
 
@@ -98,7 +98,7 @@ class CircuitBreaker:
             result = func(*args, **kwargs)
             self._on_success()
             return result
-        except Exception as exc:
+        except Exception:
             self._on_failure()
             if fallback is not None and self.state == CircuitState.OPEN:
                 return fallback(*args, **kwargs)

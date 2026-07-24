@@ -2,11 +2,9 @@
 
 import json
 import os
-import tempfile
 
 import pytest
-
-from mcp_monitor.audit.log import AuditEntry, AuditLog
+from mcp_monitor.audit.log import AuditLog
 from mcp_monitor.audit.wal import WriteAheadLog
 
 

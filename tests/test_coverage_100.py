@@ -3,15 +3,11 @@
 Covers all previously-uncovered lines across the codebase.
 """
 
-import tempfile
-from pathlib import Path
 
-import pytest
 
 from mcp_monitor.audit.log import AuditLog
 from mcp_monitor.audit.wal import WriteAheadLog
 from mcp_monitor.monitor import MCPSecurityMonitor
-
 
 # =====================================================================
 # monitor.py — inspect_output + inspect_call edge cases (lines 61-76, 128-164)
@@ -186,7 +182,9 @@ class TestManifestEdgeCases:
     def test_baseline_tampered_detected(self):
         """Cover line 122: stored baseline has invalid signature."""
         from mcp_monitor.advanced.manifest import (
-            ManifestSigner, ManifestVerifier, ToolManifest,
+            ManifestSigner,
+            ManifestVerifier,
+            ToolManifest,
         )
         signer = ManifestSigner("key-A")
         verifier = ManifestVerifier("key-A")
@@ -205,7 +203,9 @@ class TestManifestEdgeCases:
     def test_capability_reduction_detected(self):
         """Cover line 152: capabilities lost."""
         from mcp_monitor.advanced.manifest import (
-            ManifestSigner, ManifestVerifier, ToolManifest,
+            ManifestSigner,
+            ManifestVerifier,
+            ToolManifest,
         )
         signer = ManifestSigner("key")
         verifier = ManifestVerifier("key")
@@ -261,7 +261,7 @@ class TestCanaryEdgeCases:
 
     def test_health_with_drift_count(self):
         """Cover lines 219-220: drift status counted in health."""
-        from mcp_monitor.advanced.canary import CanaryProbe, CanaryStatus, ToolCanary
+        from mcp_monitor.advanced.canary import CanaryProbe, ToolCanary
         canary = ToolCanary()
         probe = CanaryProbe(
             probe_id="drift-probe",
@@ -288,7 +288,8 @@ class TestCorrelationEdgeCases:
     def test_rule_condition_returns_false(self):
         """Cover line 86: condition check that rejects the match."""
         from mcp_monitor.advanced.correlation import (
-            CorrelationRule, CrossToolCorrelationEngine,
+            CorrelationRule,
+            CrossToolCorrelationEngine,
         )
         engine = CrossToolCorrelationEngine(rules=[])
         # Rule that always rejects via condition
@@ -404,7 +405,9 @@ class TestInvariantsFullCoverage:
     def test_value_matches_pass(self):
         """Cover VALUE_MATCHES when pattern matches (no violation)."""
         from mcp_monitor.advanced.invariants import (
-            Invariant, InvariantEnforcer, InvariantType,
+            Invariant,
+            InvariantEnforcer,
+            InvariantType,
         )
         e = InvariantEnforcer(include_builtins=False)
         e.add_invariant(Invariant(
@@ -422,7 +425,9 @@ class TestInvariantsFullCoverage:
     def test_value_matches_fail(self):
         """Cover VALUE_MATCHES violation returned."""
         from mcp_monitor.advanced.invariants import (
-            Invariant, InvariantEnforcer, InvariantType,
+            Invariant,
+            InvariantEnforcer,
+            InvariantType,
         )
         e = InvariantEnforcer(include_builtins=False)
         e.add_invariant(Invariant(
@@ -441,7 +446,9 @@ class TestInvariantsFullCoverage:
     def test_value_not_in_set_violation(self):
         """Cover VALUE_NOT_IN_SET violation."""
         from mcp_monitor.advanced.invariants import (
-            Invariant, InvariantEnforcer, InvariantType,
+            Invariant,
+            InvariantEnforcer,
+            InvariantType,
         )
         e = InvariantEnforcer(include_builtins=False)
         e.add_invariant(Invariant(
@@ -460,7 +467,9 @@ class TestInvariantsFullCoverage:
     def test_value_not_in_set_pass(self):
         """Cover VALUE_NOT_IN_SET when value is allowed."""
         from mcp_monitor.advanced.invariants import (
-            Invariant, InvariantEnforcer, InvariantType,
+            Invariant,
+            InvariantEnforcer,
+            InvariantType,
         )
         e = InvariantEnforcer(include_builtins=False)
         e.add_invariant(Invariant(
@@ -478,7 +487,9 @@ class TestInvariantsFullCoverage:
     def test_resolve_path_non_dict_intermediate(self):
         """Cover line 309: non-dict encountered during path resolution."""
         from mcp_monitor.advanced.invariants import (
-            Invariant, InvariantEnforcer, InvariantType,
+            Invariant,
+            InvariantEnforcer,
+            InvariantType,
         )
         e = InvariantEnforcer(include_builtins=False)
         e.add_invariant(Invariant(
@@ -497,7 +508,9 @@ class TestInvariantsFullCoverage:
     def test_add_invariants_bulk(self):
         """Cover add_invariants method."""
         from mcp_monitor.advanced.invariants import (
-            Invariant, InvariantEnforcer, InvariantType,
+            Invariant,
+            InvariantEnforcer,
+            InvariantType,
         )
         e = InvariantEnforcer(include_builtins=False)
         invs = [
@@ -512,7 +525,9 @@ class TestInvariantsFullCoverage:
     def test_custom_invariant_passes(self):
         """Cover CUSTOM type when predicate returns True (no violation)."""
         from mcp_monitor.advanced.invariants import (
-            Invariant, InvariantEnforcer, InvariantType,
+            Invariant,
+            InvariantEnforcer,
+            InvariantType,
         )
         e = InvariantEnforcer(include_builtins=False)
         e.add_invariant(Invariant(
@@ -529,7 +544,9 @@ class TestInvariantsFullCoverage:
     def test_resolve_empty_path(self):
         """Cover _resolve_path with empty path returns data itself."""
         from mcp_monitor.advanced.invariants import (
-            Invariant, InvariantEnforcer, InvariantType,
+            Invariant,
+            InvariantEnforcer,
+            InvariantType,
         )
         e = InvariantEnforcer(include_builtins=False)
         e.add_invariant(Invariant(
@@ -612,7 +629,9 @@ class TestFinalCoverageGaps:
     def test_invariant_output_only_skipped_in_call(self):
         """Cover invariants.py lines 156, 173: output-only invariant skipped during check_call."""
         from mcp_monitor.advanced.invariants import (
-            Invariant, InvariantEnforcer, InvariantType,
+            Invariant,
+            InvariantEnforcer,
+            InvariantType,
         )
         e = InvariantEnforcer(include_builtins=False)
         e.add_invariant(Invariant(
@@ -631,7 +650,9 @@ class TestFinalCoverageGaps:
     def test_invariant_arguments_only_skipped_in_output(self):
         """Cover invariants.py line 173: arguments-only skipped in check_output."""
         from mcp_monitor.advanced.invariants import (
-            Invariant, InvariantEnforcer, InvariantType,
+            Invariant,
+            InvariantEnforcer,
+            InvariantType,
         )
         e = InvariantEnforcer(include_builtins=False)
         e.add_invariant(Invariant(
@@ -712,7 +733,9 @@ class TestFinalFourLines:
     def test_invariant_tool_pattern_no_match_in_output(self):
         """Cover invariants.py line 173: tool pattern doesn't match in check_output."""
         from mcp_monitor.advanced.invariants import (
-            Invariant, InvariantEnforcer, InvariantType,
+            Invariant,
+            InvariantEnforcer,
+            InvariantType,
         )
         e = InvariantEnforcer(include_builtins=False)
         e.add_invariant(Invariant(
@@ -735,7 +758,9 @@ class TestFinalFourLines:
         returns data at line 299.
         """
         from mcp_monitor.advanced.invariants import (
-            Invariant, InvariantEnforcer, InvariantType,
+            Invariant,
+            InvariantEnforcer,
+            InvariantType,
         )
         e = InvariantEnforcer(include_builtins=False)
         # FIELD_PRESENT with empty path — should check if data itself exists

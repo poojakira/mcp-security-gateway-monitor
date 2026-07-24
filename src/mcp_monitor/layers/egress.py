@@ -1,8 +1,11 @@
 """Layer 5: Network Egress Policy Engine."""
 from __future__ import annotations
-import re, time
+
+import re
+import time
 from dataclasses import dataclass, field
 from typing import Any
+
 
 @dataclass
 class EgressRule:
