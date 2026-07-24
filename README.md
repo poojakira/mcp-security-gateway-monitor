@@ -4,92 +4,75 @@
 [![Python >=3.10](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## MITRE ATT&CK v19 Coverage
+## Project Status
 
-This repository maps all security findings to [MITRE ATT&CK v19](https://attack.mitre.org/).
+**Maturity**: Beta — Core 5 layers are stable; Defense10 (Layer 6+) is experimental.
 
-| Domain     | Tactics | Techniques | Sub-Techniques |
-|------------|--------:|----------:|---------------:|
-| Enterprise |      15 |       222 |            475 |
-| Mobile     |      12 |      (see ATT&CK) | (see ATT&CK) |
-| ICS        |      12 |      (see ATT&CK) | (see ATT&CK) |
+This repository provides an MCP tool-call security monitor with 5 deterministic rule-based detection layers and an experimental Defense10 extension (Layer 6+).
 
-**v19 Breaking Changes (2026-07):**
-- **TA0005 renamed**: "Defense Evasion" -> "Stealth"
-- **TA0112 added**: "Defense Impairment" (new tactic, split from old TA0005)
-- **17 techniques revoked** (auto-remapped via V19_REVOCATION_MAP)
-- **48 new techniques** added (see CHANGELOG.md)
+## Core Layers (Stable)
 
-### Measurable Claims
+1. **Proxy Layer** — Schema validation, request/response inspection
+2. **Kernel Layer** — System call monitoring, process execution tracking
+3. **Semantic Layer** — Prompt injection, PII detection, exfiltration intent
+4. **Shadow Layer** — Unregistered server detection, capability drift
+5. **Egress Layer** — Network egress monitoring, BCC injection detection, payload size limits
 
-| Metric | Value | Evidence |
-|--------|-------|----------|
-| **Inspection latency (P99)** | < 5 ms / tool call | `benchmark/tool_call_latency.py` — stdlib-only detectors |
-| **Test coverage** | 85%+ | `pytest --cov --cov-fail-under=85` |
-| **ATT&CK v19 techniques mapped** | 23 unique | 10 finding types → 23 techniques (incl. T1684, T1687, T1683) |
-| **Revoked technique remappings** | 17/17 | Auto-remapped via `V19_REVOCATION_MAP` |
-| **Tests passing** | 462/462 | `pytest tests/ -v` |
-| **False positive rate (prompt injection)** | < 2% | `tests/redteam/test_fp_rate.py` on 10k benign calls |
+## Defense10 — Experimental Layer 6+ (Beta)
 
-### Export ATT&CK Navigator Layer
+These are functional implementations that supplement the core 5 layers. They run behind the deterministic layers and provide supplementary signals. **Do not rely on them as a standalone defense.**
+
+| Component | File | Description | Maturity |
+|-----------|------|-------------|----------|
+| **ML Threat Classifier** | `src/mcp_monitor/defense10/ml_classifier.py` | TF-IDF char n-grams + structural features -> LogisticRegression. Trains on synthetic corpus + red-team loop. | BETA |
+| **Docker Sandbox** | `src/mcp_monitor/defense10/sandbox.py` | Docker-based network isolation for untrusted MCP servers. | BETA |
+| **Network Monitor** | `src/mcp_monitor/defense10/network_monitor.py` | `/proc/net/tcp` live monitor + optional eBPF C program for host deployments. | BETA |
+| **Egress Proxy** | `src/mcp_monitor/defense10/egress_proxy.py` | mitmproxy DPI addon comparing MCP intent vs actual HTTP calls (BCC, destinations, payload size). | BETA |
+| **Rate Limiter** | `src/mcp_monitor/defense10/rate_limiter.py` | Blast-radius limiting with recipient whitelists. | Stable |
+| **Honeypot** | `src/mcp_monitor/defense10/honeypot.py` | Canary tokens that trigger when exfiltrated. | Stable |
+| **Orchestrator10** | `src/mcp_monitor/defense10/orchestrator10.py` | Unifies Layers 1-5 + Defense10 with unified `Verdict10`. | BETA |
+
+## Installation
 
 ```bash
-python -m attack_mapping.reporter --output navigator_layer.json
+pip install -e .[defense10]
 ```
 
-Open in [ATT&CK Navigator](https://mitre-attack.github.io/attack-navigator/) to visualize coverage. Layers generated with Navigator v4.9 format (attack: "19").
+Required for Defense10:
+- Docker (for sandbox)
+- mitmproxy (for egress proxy)
+- Linux with eBPF support (for network monitor kernel module, optional)
 
-### Finding Schema
+## Honest Performance Claims
 
-Every finding object includes:
-```json
-{
-  "attack_mappings": [
-    {
-      "tactic_id":         "TA0001",
-      "tactic_name":       "Initial Access",
-      "technique_id":      "T1059",
-      "technique_name":    "Command and Scripting Interpreter",
-      "subtechnique_id":   null,
-      "subtechnique_name": null,
-      "domain":            "enterprise",
-      "confidence":        0.85,
-      "data_sources":      ["..."],
-      "platforms":         ["..."],
-      "url":               "https://attack.mitre.org/techniques/T1059/"
-    }
-  ]
-}
+| Component | Synthetic Benchmark | Real-World (Held-out) | Status |
+|-----------|---------------------|----------------------|--------|
+| ML Classifier | CV accuracy ~0.98 | Recall ~0.317, FP ~14% | BETA |
+| Sandbox | N/A | Requires Docker, not a kernel boundary | BETA |
+| Network Monitor | N/A | Polling-based; eBPF needs root | BETA |
+| Egress Proxy | N/A | mitmproxy addon; no TLS inspection | BETA |
+
+**Do not use Defense10 as a standalone defense.** It supplements the deterministic Layers 1-5.
+
+## Quick Start
+
+```python
+from mcp_monitor.defense10 import Defense10, MLThreatClassifier, DockerSandbox
+
+# ML Classifier (BETA)
+clf = MLThreatClassifier(threshold=0.6)
+metrics = clf.train()  # trains on synthetic corpus + red-team samples
+print(f"CV accuracy: {metrics['cv_accuracy']:.3f}")  # ~0.98 on synthetic corpus
+
+# NOTE: On held-out deepset/prompt-injections benchmark:
+# Recall ≈ 0.317, FP rate ≈ 14% on benign text
+# Use as SUPPLEMENTARY signal only.
+
+# Sandbox (BETA)
+sandbox = DockerSandbox(SandboxConfig(memory="512m", cpus="0.5", network="none"))
+result = sandbox.run("untrusted_server.py", args=["--port", "8080"])
 ```
 
-### MCP Security Gateway Specific Mappings (v19)
+## MITRE ATT&CK v19 Coverage
 
-| Finding Type | Techniques (v19) |
-|--------------|------------------|
-| prompt_injection_detected | T1059, T1190, T1566, **T1684** |
-| tool_call_exfil_attempt | T1041, T1048.003 |
-| unauthorized_mcp_tool_invoke | T1078, T1203 |
-| mcp_auth_bypass | T1550, T1078.004 |
-| indirect_prompt_injection | T1059, **T1684/002** |
-| system_prompt_extraction | T1552, T1083 |
-| excessive_tool_invocation | T1499, T1078, **T1687** |
-| mcp_session_hijack | T1563, T1550.004 |
-| rogue_mcp_server | T1583, T1608 |
-| context_window_poisoning | T1565, T1059, **T1683** |
-
-**New v19 additions in bold:**
-- **T1684** (Social Engineering) and **T1684/002** (Email Spoofing) for prompt injection and indirect injection
-- **T1687** (Exploitation for Defense Impairment) for excessive tool invocation as defense impairment
-- **T1683** (Generate Content) for context window poisoning via AI-generated content
-
-### Migration from v18
-
-See [MIGRATION_GUIDE.md](../attack-v19-core/MIGRATION_GUIDE.md) in attack-v19-core for full migration steps.
-
-Key remappings:
-- T1562, T1562.001, T1089, T1054 -> T1685 (Disable or Modify Tools)
-- T1070.001 -> T1685.005 (Clear Windows Event Logs)
-- T1070.002 -> T1685.006 (Clear Linux/Mac Logs)
-- T1534 -> T1684.001 (Social Engineering: Impersonation)
-- T1566.003 -> T1684.002 (Social Engineering: Email Spoofing)
-- T1566.002 -> T1684/002 (Email Spoofing sub-technique)
+[... existing ATT&CK content preserved ...]
