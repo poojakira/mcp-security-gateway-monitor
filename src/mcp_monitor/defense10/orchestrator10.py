@@ -4,7 +4,7 @@ Chains the original 5 layers with the defense10 components:
 
   L1  Application detectors        (regex, PII, shadow, exfil)
   L2  Inline proxy enforcement
-  L3  Kernel/network monitor       (/proc + eBPF) — sees server-side calls
+  L3  Process behavior monitor     (policy engine for syscall events)
   L4  Semantic + ML classifier     (opaque to adversary)
   L5  Network egress policy
   L6  DPI egress inspection        (MCP intent vs actual call) *** the big one

@@ -1,4 +1,4 @@
-"""Layer 3: Kernel-level monitoring for MCP server behavior."""
+"""Layer 3: Process behavior policy engine for MCP server behavior."""
 
 from __future__ import annotations
 
@@ -28,13 +28,17 @@ class SyscallEvent:
 
 
 @dataclass
-class KernelAlert:
+class BehaviorAlert:
     server_id: str
     alert_type: str
     description: str
     severity: int
     syscall_event: SyscallEvent | None = None
     timestamp: float = field(default_factory=time.time)
+
+
+# Backward compatibility alias
+KernelAlert = BehaviorAlert
 
 
 @dataclass
@@ -49,23 +53,31 @@ class ServerPolicy:
     allow_dns: bool = True
 
 
-class KernelMonitor:
+class ProcessBehaviorMonitor:
+    """Policy engine that evaluates structured syscall events against per-server policies.
+
+    Monitors network connections, DNS, file access, process spawning, and socket
+    sends. Despite the historical 'kernel' naming, this operates at the application
+    layer — it processes SyscallEvent objects rather than performing actual kernel
+    instrumentation.
+    """
+
     def __init__(self) -> None:
         self._policies: dict[str, ServerPolicy] = {}
         self._events: dict[str, list[SyscallEvent]] = defaultdict(list)
-        self._alerts: list[KernelAlert] = []
+        self._alerts: list[BehaviorAlert] = []
         self._connection_counts: dict[str, list[float]] = defaultdict(list)
 
     def register_policy(self, policy: ServerPolicy) -> None:
         self._policies[policy.server_id] = policy
 
-    def process_event(self, event: SyscallEvent) -> list[KernelAlert]:
+    def process_event(self, event: SyscallEvent) -> list[BehaviorAlert]:
         self._events[event.server_id].append(event)
-        alerts: list[KernelAlert] = []
+        alerts: list[BehaviorAlert] = []
         policy = self._policies.get(event.server_id)
         if policy is None:
             alerts.append(
-                KernelAlert(
+                BehaviorAlert(
                     server_id=event.server_id,
                     alert_type="no_policy",
                     description=f"Syscall from server with no policy: {event.syscall_type.value}",
@@ -80,7 +92,7 @@ class KernelMonitor:
         elif event.syscall_type == SyscallType.DNS_RESOLVE:
             if not policy.allow_dns:
                 alerts.append(
-                    KernelAlert(
+                    BehaviorAlert(
                         server_id=event.server_id,
                         alert_type="unauthorized_dns",
                         description=f"DNS not allowed: {event.details.get('domain', '')}",
@@ -91,7 +103,7 @@ class KernelMonitor:
             domain = event.details.get("domain", "")
             if domain in policy.blocked_destinations:
                 alerts.append(
-                    KernelAlert(
+                    BehaviorAlert(
                         server_id=event.server_id,
                         alert_type="blocked_dns",
                         description=f"Blocked domain DNS: {domain}",
@@ -103,7 +115,7 @@ class KernelMonitor:
             path = event.details.get("path", "")
             if policy.allowed_paths and not any(path.startswith(p) for p in policy.allowed_paths):
                 alerts.append(
-                    KernelAlert(
+                    BehaviorAlert(
                         server_id=event.server_id,
                         alert_type="unauthorized_file_access",
                         description=f"File outside allowed: {path}",
@@ -114,7 +126,7 @@ class KernelMonitor:
         elif event.syscall_type == SyscallType.PROCESS_SPAWN:
             if not policy.allow_subprocess:
                 alerts.append(
-                    KernelAlert(
+                    BehaviorAlert(
                         server_id=event.server_id,
                         alert_type="unauthorized_subprocess",
                         description=f"Subprocess: {event.details.get('command', '')}",
@@ -127,7 +139,7 @@ class KernelMonitor:
             dest = event.details.get("destination", "")
             if size > 10240 and dest not in policy.allowed_destinations:
                 alerts.append(
-                    KernelAlert(
+                    BehaviorAlert(
                         server_id=event.server_id,
                         alert_type="large_send_unknown_dest",
                         description=f"Large send ({size}B) to {dest}",
@@ -144,7 +156,7 @@ class KernelMonitor:
             ]
             if len(self._connection_counts[event.server_id]) > policy.max_connections_per_minute:
                 alerts.append(
-                    KernelAlert(
+                    BehaviorAlert(
                         server_id=event.server_id,
                         alert_type="rate_limit_exceeded",
                         description=f"Rate: {len(self._connection_counts[event.server_id])}/min > {policy.max_connections_per_minute}",
@@ -155,13 +167,13 @@ class KernelMonitor:
         self._alerts.extend(alerts)
         return alerts
 
-    def _check_network(self, event: SyscallEvent, policy: ServerPolicy) -> list[KernelAlert]:
+    def _check_network(self, event: SyscallEvent, policy: ServerPolicy) -> list[BehaviorAlert]:
         alerts = []
         dest = event.details.get("destination", "")
         port = event.details.get("port", 0)
         if dest in policy.blocked_destinations:
             alerts.append(
-                KernelAlert(
+                BehaviorAlert(
                     server_id=event.server_id,
                     alert_type="blocked_destination",
                     description=f"Blocked: {dest}:{port}",
@@ -172,7 +184,7 @@ class KernelMonitor:
             return alerts
         if policy.allowed_destinations and dest not in policy.allowed_destinations:
             alerts.append(
-                KernelAlert(
+                BehaviorAlert(
                     server_id=event.server_id,
                     alert_type="unknown_destination",
                     description=f"Unapproved: {dest}:{port}",
@@ -182,7 +194,7 @@ class KernelMonitor:
             )
         if policy.allowed_ports and port not in policy.allowed_ports:
             alerts.append(
-                KernelAlert(
+                BehaviorAlert(
                     server_id=event.server_id,
                     alert_type="unauthorized_port",
                     description=f"Port {port} not allowed",
@@ -192,7 +204,7 @@ class KernelMonitor:
             )
         if self.detect_hidden_smtp(event):
             alerts.append(
-                KernelAlert(
+                BehaviorAlert(
                     server_id=event.server_id,
                     alert_type="hidden_smtp",
                     description=f"Hidden SMTP on port {port} to {dest}",
@@ -212,7 +224,7 @@ class KernelMonitor:
                 return True
         return False
 
-    def get_alerts(self, server_id: str | None = None) -> list[KernelAlert]:
+    def get_alerts(self, server_id: str | None = None) -> list[BehaviorAlert]:
         if server_id:
             return [a for a in self._alerts if a.server_id == server_id]
         return list(self._alerts)
@@ -229,3 +241,7 @@ class KernelMonitor:
             "has_policy": server_id in self._policies,
             "alert_count": len([a for a in self._alerts if a.server_id == server_id]),
         }
+
+
+# Backward compatibility alias
+KernelMonitor = ProcessBehaviorMonitor

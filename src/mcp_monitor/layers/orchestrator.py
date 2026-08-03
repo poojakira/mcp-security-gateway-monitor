@@ -134,7 +134,7 @@ class FiveLayerDefense:
         layer_results.append(
             LayerResult(
                 layer=3,
-                layer_name="kernel_behavior",
+                layer_name="process_behavior",
                 passed=l3_passed,
                 risk_score=0 if l3_passed else 85,
                 findings=l3_findings,

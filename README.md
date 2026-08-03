@@ -116,7 +116,7 @@ This project implements a defense-in-depth architecture with 10 layers that work
 |-------|------|--------------|
 | 1 | **Audit Log** | Records tool calls in a SHA-256 hash-chained log. Tampering can be detected when the chain is verified. |
 | 2 | **Inline Proxy Gateway** | Intercepts all tool calls. Applies rules, risk scoring, and blocks/quarantines suspicious calls before they execute. |
-| 3 | **Kernel Monitor** | Watches syscall-level behavior: network connections, DNS lookups, file access, process spawning. Enforces per-server policies. |
+| 3 | **Process Behavior Monitor** | Evaluates syscall-level events: network connections, DNS lookups, file access, process spawning. Enforces per-server behavioral policies. |
 | 4 | **Semantic Intent Analyzer** | Understands what a tool call is trying to do. Detects BCC synonyms, exfiltration patterns, encoded emails, and suspicious fields. |
 | 5 | **Network Egress Policy** | Controls what destinations each server can reach. Default-deny with explicit allow rules. Blocks known-bad domains and oversized payloads. |
 | 6 | **ML Threat Classifier** *(BETA)* | Experimental scikit-learn model (TF-IDF char n-grams + LogisticRegression) trained on a built-in synthetic corpus. Supplementary signal only — see the BETA note below for measured held-out performance. |
@@ -166,7 +166,7 @@ mcp-security-gateway-monitor/
 │       │   └── canary.py             <- Active behavioral probes
 │       ├── layers/
 │       │   ├── proxy.py              <- Layer 2: Inline Proxy Gateway
-│       │   ├── kernel.py             <- Layer 3: Kernel Monitor
+│       │   ├── kernel.py             <- Layer 3: Process Behavior Monitor
 │       │   ├── semantic.py           <- Layer 4: Semantic Intent Analyzer
 │       │   ├── egress.py             <- Layer 5: Network Egress Policy
 │       │   └── orchestrator.py       <- FiveLayerDefense orchestrator
@@ -234,14 +234,14 @@ The Docker Compose deployment is a separate stdlib production service on port 80
 
 ```python
 from mcp_monitor.layers import (
-    InlineProxyGateway, KernelMonitor,
+    InlineProxyGateway, ProcessBehaviorMonitor,
     SemanticIntentAnalyzer, NetworkEgressPolicy, FiveLayerDefense,
 )
 from mcp_monitor.redteam import AttackSimulator
 from mcp_monitor.dashboard import TerminalDashboard
 
 proxy = InlineProxyGateway()
-kernel = KernelMonitor()
+kernel = ProcessBehaviorMonitor()
 semantic = SemanticIntentAnalyzer()
 egress = NetworkEgressPolicy(default_deny=True)
 

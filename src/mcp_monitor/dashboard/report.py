@@ -25,7 +25,7 @@ class HTMLReportGenerator:
                 layer_names = {
                     1: "Audit Log",
                     2: "Inline Proxy",
-                    3: "Kernel Monitor",
+                    3: "Process Behavior Monitor",
                     4: "Semantic Analyzer",
                     5: "Egress Policy",
                 }
@@ -82,7 +82,7 @@ class HTMLReportGenerator:
         by_layer_html = ""
         layer_names = {
             2: "Inline Proxy",
-            3: "Kernel Monitor",
+            3: "Process Behavior Monitor",
             4: "Semantic Analyzer",
             5: "Egress Policy",
         }

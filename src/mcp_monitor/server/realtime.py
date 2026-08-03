@@ -22,7 +22,7 @@ except ImportError as _err:
 from mcp_monitor.layers import (
     FiveLayerDefense,
     InlineProxyGateway,
-    KernelMonitor,
+    ProcessBehaviorMonitor,
     NetworkEgressPolicy,
     SemanticIntentAnalyzer,
 )
@@ -47,7 +47,7 @@ def _build_defense() -> FiveLayerDefense:
     from mcp_monitor.layers.proxy import ProxyRule
 
     proxy = InlineProxyGateway(block_threshold=50, quarantine_threshold=30)
-    kernel = KernelMonitor()
+    kernel = ProcessBehaviorMonitor()
     semantic = SemanticIntentAnalyzer(sensitivity=0.7)
     egress = NetworkEgressPolicy(default_deny=True)
 

@@ -11,7 +11,7 @@ import os
 
 from mcp_monitor.layers import (
     InlineProxyGateway,
-    KernelMonitor,
+    ProcessBehaviorMonitor,
     SemanticIntentAnalyzer,
     NetworkEgressPolicy,
     FiveLayerDefense,
@@ -26,8 +26,8 @@ def main() -> None:
     # --- Layer 2: Inline Proxy Gateway ---
     proxy = InlineProxyGateway(block_threshold=50, quarantine_threshold=30)
 
-    # --- Layer 3: Kernel Monitor with a default server policy ---
-    kernel = KernelMonitor()
+    # --- Layer 3: Process Behavior Monitor with a default server policy ---
+    kernel = ProcessBehaviorMonitor()
     default_policy = ServerPolicy(
         server_id="mcp-server",
         allowed_destinations={"api.github.com", "smtp.postmarkapp.com"},

@@ -61,7 +61,7 @@ class TerminalDashboard:
 
         layer_names = {
             2: "Inline Proxy",
-            3: "Kernel Monitor",
+            3: "Process Behavior Monitor",
             4: "Semantic Analyzer",
             5: "Egress Policy",
         }
