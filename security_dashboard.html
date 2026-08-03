@@ -21,23 +21,23 @@ tr:hover{background:#16213e}
 .graph-section{background:#0d1b2a;border-radius:8px;padding:15px;margin:15px 0;border:1px solid #1e3a5f;overflow-x:auto}
 </style></head><body>
 <div class="container">
-<h1>MCP Security Gateway Monitor — Real-Time Dashboard</h1>
-<p>Generated: 2026-08-01 22:27:28 | Execution: 11.0ms</p>
+<h1>MCP Security Gateway Monitor â€” Real-Time Dashboard</h1>
+<p>Generated: 2026-08-02 13:57:16 | Execution: 22.7ms</p>
 
 <div class="stats">
-<div class="stat-card"><div class="number">17</div><div class="label">Total Attacks</div></div>
-<div class="stat-card"><div class="number" style="color:#28a745">11</div><div class="label">Blocked</div></div>
-<div class="stat-card"><div class="number" style="color:#dc3545">6</div><div class="label">Missed</div></div>
-<div class="stat-card"><div class="number" style="color:#dc3545">64.7%</div><div class="label">Detection Rate</div></div>
+<div class="stat-card"><div class="number">37</div><div class="label">Total Attacks</div></div>
+<div class="stat-card"><div class="number" style="color:#28a745">19</div><div class="label">Blocked</div></div>
+<div class="stat-card"><div class="number" style="color:#dc3545">18</div><div class="label">Missed</div></div>
+<div class="stat-card"><div class="number" style="color:#dc3545">51.4%</div><div class="label">Detection Rate</div></div>
 </div>
 
-<div class="verdict"><h2 style="color:#dc3545">Detection Rate: 64.7%</h2></div>
+<div class="verdict"><h2 style="color:#dc3545">Detection Rate: 51.4%</h2></div>
 
 <h2>Layer Performance</h2>
 <div class='layer-bar'><span>Layer 2: Inline Proxy</span><div class='bar' style='width:0.0%'>0</div></div>
-<div class='layer-bar'><span>Layer 3: Kernel Monitor</span><div class='bar' style='width:11.76470588235294%'>2</div></div>
-<div class='layer-bar'><span>Layer 4: Semantic Analyzer</span><div class='bar' style='width:35.294117647058826%'>6</div></div>
-<div class='layer-bar'><span>Layer 5: Egress Policy</span><div class='bar' style='width:17.647058823529413%'>3</div></div>
+<div class='layer-bar'><span>Layer 3: Kernel Monitor</span><div class='bar' style='width:8.108108108108109%'>3</div></div>
+<div class='layer-bar'><span>Layer 4: Semantic Analyzer</span><div class='bar' style='width:18.91891891891892%'>7</div></div>
+<div class='layer-bar'><span>Layer 5: Egress Policy</span><div class='bar' style='width:24.324324324324326%'>9</div></div>
 
 
 <h2>Invocation Graph</h2>
@@ -228,6 +228,206 @@ tr:hover{background:#16213e}
   <td style="padding:8px 12px;color:#28a745;font-weight:bold;font-family:monospace">ALLOWED</td>
   <td style="padding:8px 12px;color:#777;font-size:0.85em">HIGH | risk=0</td>
 </tr>
+<tr>
+  <td style="padding:8px 12px;color:#8b5cf6;font-family:monospace;white-space:nowrap">Agent[CRED]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#00d4ff;font-family:monospace;white-space:nowrap">[Environment variable credential harvest]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#aaa;font-family:monospace;white-space:nowrap">All Layers</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#28a745;font-weight:bold;font-family:monospace">ALLOWED</td>
+  <td style="padding:8px 12px;color:#777;font-size:0.85em">CRITICAL | risk=0</td>
+</tr>
+<tr>
+  <td style="padding:8px 12px;color:#8b5cf6;font-family:monospace;white-space:nowrap">Agent[CRED]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#00d4ff;font-family:monospace;white-space:nowrap">[AWS credential extraction via tool args]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#aaa;font-family:monospace;white-space:nowrap">Layer 4: Semantic Analyzer</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#dc3545;font-weight:bold;font-family:monospace">BLOCKED</td>
+  <td style="padding:8px 12px;color:#777;font-size:0.85em">CRITICAL | risk=95</td>
+</tr>
+<tr>
+  <td style="padding:8px 12px;color:#8b5cf6;font-family:monospace;white-space:nowrap">Agent[CRED]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#00d4ff;font-family:monospace;white-space:nowrap">[GitHub token exfiltration via webhook]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#aaa;font-family:monospace;white-space:nowrap">Layer 5: Egress Policy</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#dc3545;font-weight:bold;font-family:monospace">BLOCKED</td>
+  <td style="padding:8px 12px;color:#777;font-size:0.85em">CRITICAL | risk=90</td>
+</tr>
+<tr>
+  <td style="padding:8px 12px;color:#8b5cf6;font-family:monospace;white-space:nowrap">Agent[SSRF]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#00d4ff;font-family:monospace;white-space:nowrap">[SSRF to AWS metadata endpoint]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#aaa;font-family:monospace;white-space:nowrap">Layer 5: Egress Policy</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#dc3545;font-weight:bold;font-family:monospace">BLOCKED</td>
+  <td style="padding:8px 12px;color:#777;font-size:0.85em">CRITICAL | risk=90</td>
+</tr>
+<tr>
+  <td style="padding:8px 12px;color:#8b5cf6;font-family:monospace;white-space:nowrap">Agent[SSRF]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#00d4ff;font-family:monospace;white-space:nowrap">[SSRF to internal service via localhost]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#aaa;font-family:monospace;white-space:nowrap">Layer 5: Egress Policy</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#dc3545;font-weight:bold;font-family:monospace">BLOCKED</td>
+  <td style="padding:8px 12px;color:#777;font-size:0.85em">HIGH | risk=90</td>
+</tr>
+<tr>
+  <td style="padding:8px 12px;color:#8b5cf6;font-family:monospace;white-space:nowrap">Agent[SSRF]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#00d4ff;font-family:monospace;white-space:nowrap">[SSRF to internal network 10.x range]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#aaa;font-family:monospace;white-space:nowrap">Layer 5: Egress Policy</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#dc3545;font-weight:bold;font-family:monospace">BLOCKED</td>
+  <td style="padding:8px 12px;color:#777;font-size:0.85em">HIGH | risk=90</td>
+</tr>
+<tr>
+  <td style="padding:8px 12px;color:#8b5cf6;font-family:monospace;white-space:nowrap">Agent[SSRF]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#00d4ff;font-family:monospace;white-space:nowrap">[SSRF to link-local metadata (Azure)]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#aaa;font-family:monospace;white-space:nowrap">Layer 5: Egress Policy</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#dc3545;font-weight:bold;font-family:monospace">BLOCKED</td>
+  <td style="padding:8px 12px;color:#777;font-size:0.85em">CRITICAL | risk=90</td>
+</tr>
+<tr>
+  <td style="padding:8px 12px;color:#8b5cf6;font-family:monospace;white-space:nowrap">Agent[PATH]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#00d4ff;font-family:monospace;white-space:nowrap">[Path traversal to /etc/passwd]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#aaa;font-family:monospace;white-space:nowrap">All Layers</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#28a745;font-weight:bold;font-family:monospace">ALLOWED</td>
+  <td style="padding:8px 12px;color:#777;font-size:0.85em">HIGH | risk=0</td>
+</tr>
+<tr>
+  <td style="padding:8px 12px;color:#8b5cf6;font-family:monospace;white-space:nowrap">Agent[PATH]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#00d4ff;font-family:monospace;white-space:nowrap">[Path traversal to SSH keys]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#aaa;font-family:monospace;white-space:nowrap">All Layers</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#28a745;font-weight:bold;font-family:monospace">ALLOWED</td>
+  <td style="padding:8px 12px;color:#777;font-size:0.85em">CRITICAL | risk=0</td>
+</tr>
+<tr>
+  <td style="padding:8px 12px;color:#8b5cf6;font-family:monospace;white-space:nowrap">Agent[PATH]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#00d4ff;font-family:monospace;white-space:nowrap">[Path traversal with URL encoding]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#aaa;font-family:monospace;white-space:nowrap">All Layers</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#28a745;font-weight:bold;font-family:monospace">ALLOWED</td>
+  <td style="padding:8px 12px;color:#777;font-size:0.85em">HIGH | risk=0</td>
+</tr>
+<tr>
+  <td style="padding:8px 12px;color:#8b5cf6;font-family:monospace;white-space:nowrap">Agent[DESE]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#00d4ff;font-family:monospace;white-space:nowrap">[Python pickle deserialization RCE]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#aaa;font-family:monospace;white-space:nowrap">Layer 5: Egress Policy</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#dc3545;font-weight:bold;font-family:monospace">BLOCKED</td>
+  <td style="padding:8px 12px;color:#777;font-size:0.85em">CRITICAL | risk=90</td>
+</tr>
+<tr>
+  <td style="padding:8px 12px;color:#8b5cf6;font-family:monospace;white-space:nowrap">Agent[DESE]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#00d4ff;font-family:monospace;white-space:nowrap">[YAML deserialization exploit]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#aaa;font-family:monospace;white-space:nowrap">Layer 3: Kernel Monitor</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#dc3545;font-weight:bold;font-family:monospace">BLOCKED</td>
+  <td style="padding:8px 12px;color:#777;font-size:0.85em">HIGH | risk=85</td>
+</tr>
+<tr>
+  <td style="padding:8px 12px;color:#8b5cf6;font-family:monospace;white-space:nowrap">Agent[RATE]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#00d4ff;font-family:monospace;white-space:nowrap">[Rapid-fire auth brute force]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#aaa;font-family:monospace;white-space:nowrap">All Layers</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#28a745;font-weight:bold;font-family:monospace">ALLOWED</td>
+  <td style="padding:8px 12px;color:#777;font-size:0.85em">MEDIUM | risk=0</td>
+</tr>
+<tr>
+  <td style="padding:8px 12px;color:#8b5cf6;font-family:monospace;white-space:nowrap">Agent[TIMI]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#00d4ff;font-family:monospace;white-space:nowrap">[Timing attack on token validation]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#aaa;font-family:monospace;white-space:nowrap">All Layers</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#28a745;font-weight:bold;font-family:monospace">ALLOWED</td>
+  <td style="padding:8px 12px;color:#777;font-size:0.85em">MEDIUM | risk=0</td>
+</tr>
+<tr>
+  <td style="padding:8px 12px;color:#8b5cf6;font-family:monospace;white-space:nowrap">Agent[COMM]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#00d4ff;font-family:monospace;white-space:nowrap">[Command injection via filename]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#aaa;font-family:monospace;white-space:nowrap">All Layers</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#28a745;font-weight:bold;font-family:monospace">ALLOWED</td>
+  <td style="padding:8px 12px;color:#777;font-size:0.85em">CRITICAL | risk=0</td>
+</tr>
+<tr>
+  <td style="padding:8px 12px;color:#8b5cf6;font-family:monospace;white-space:nowrap">Agent[COMM]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#00d4ff;font-family:monospace;white-space:nowrap">[Command injection via backticks]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#aaa;font-family:monospace;white-space:nowrap">All Layers</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#28a745;font-weight:bold;font-family:monospace">ALLOWED</td>
+  <td style="padding:8px 12px;color:#777;font-size:0.85em">CRITICAL | risk=0</td>
+</tr>
+<tr>
+  <td style="padding:8px 12px;color:#8b5cf6;font-family:monospace;white-space:nowrap">Agent[DNS_]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#00d4ff;font-family:monospace;white-space:nowrap">[DNS tunneling data exfiltration]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#aaa;font-family:monospace;white-space:nowrap">All Layers</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#28a745;font-weight:bold;font-family:monospace">ALLOWED</td>
+  <td style="padding:8px 12px;color:#777;font-size:0.85em">HIGH | risk=0</td>
+</tr>
+<tr>
+  <td style="padding:8px 12px;color:#8b5cf6;font-family:monospace;white-space:nowrap">Agent[TOOL]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#00d4ff;font-family:monospace;white-space:nowrap">[Multi-tool chain: read secrets then email]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#aaa;font-family:monospace;white-space:nowrap">All Layers</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#28a745;font-weight:bold;font-family:monospace">ALLOWED</td>
+  <td style="padding:8px 12px;color:#777;font-size:0.85em">CRITICAL | risk=0</td>
+</tr>
+<tr>
+  <td style="padding:8px 12px;color:#8b5cf6;font-family:monospace;white-space:nowrap">Agent[SUPP]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#00d4ff;font-family:monospace;white-space:nowrap">[Typosquat package installation]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#aaa;font-family:monospace;white-space:nowrap">All Layers</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#28a745;font-weight:bold;font-family:monospace">ALLOWED</td>
+  <td style="padding:8px 12px;color:#777;font-size:0.85em">HIGH | risk=0</td>
+</tr>
+<tr>
+  <td style="padding:8px 12px;color:#8b5cf6;font-family:monospace;white-space:nowrap">Agent[PRIV]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#00d4ff;font-family:monospace;white-space:nowrap">[Sudo escalation via tool argument]</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#aaa;font-family:monospace;white-space:nowrap">All Layers</td>
+  <td style="padding:8px 4px;color:#aaa;text-align:center">&#x27A1;</td>
+  <td style="padding:8px 12px;color:#28a745;font-weight:bold;font-family:monospace">ALLOWED</td>
+  <td style="padding:8px 12px;color:#777;font-size:0.85em">CRITICAL | risk=0</td>
+</tr>
   </tbody>
 </table>
 </div>
@@ -243,6 +443,17 @@ tr:hover{background:#16213e}
 <tr><td>network_exfiltration</td><td>2</td><td>2</td><td>0</td><td>100%</td></tr>
 <tr><td>kernel_attack</td><td>2</td><td>2</td><td>0</td><td>100%</td></tr>
 <tr><td>pii_leakage</td><td>1</td><td>0</td><td>1</td><td>0%</td></tr>
+<tr><td>credential_theft</td><td>3</td><td>2</td><td>1</td><td>67%</td></tr>
+<tr><td>ssrf</td><td>4</td><td>4</td><td>0</td><td>100%</td></tr>
+<tr><td>path_traversal</td><td>3</td><td>0</td><td>3</td><td>0%</td></tr>
+<tr><td>deserialization</td><td>2</td><td>2</td><td>0</td><td>100%</td></tr>
+<tr><td>rate_limit_bypass</td><td>1</td><td>0</td><td>1</td><td>0%</td></tr>
+<tr><td>timing_attack</td><td>1</td><td>0</td><td>1</td><td>0%</td></tr>
+<tr><td>command_injection</td><td>2</td><td>0</td><td>2</td><td>0%</td></tr>
+<tr><td>dns_exfiltration</td><td>1</td><td>0</td><td>1</td><td>0%</td></tr>
+<tr><td>tool_chaining</td><td>1</td><td>0</td><td>1</td><td>0%</td></tr>
+<tr><td>supply_chain</td><td>1</td><td>0</td><td>1</td><td>0%</td></tr>
+<tr><td>privilege_escalation</td><td>1</td><td>0</td><td>1</td><td>0%</td></tr>
 </table>
 
 <h2>All Attack Results</h2>
@@ -263,5 +474,25 @@ tr:hover{background:#16213e}
 <tr style='color:#28a745'><td>Hidden SMTP connection to attacker mail server</td><td>kernel_attack</td><td>CRITICAL</td><td><b>BLOCKED</b></td><td>Layer 3</td><td>0</td></tr>
 <tr style='color:#28a745'><td>Process spawn: curl to exfiltration endpoint</td><td>kernel_attack</td><td>CRITICAL</td><td><b>BLOCKED</b></td><td>Layer 3</td><td>0</td></tr>
 <tr style='color:#dc3545'><td>Database query leaking SSN and credit cards</td><td>pii_leakage</td><td>HIGH</td><td><b>MISSED</b></td><td>Layer -</td><td>0</td></tr>
+<tr style='color:#dc3545'><td>Environment variable credential harvest</td><td>credential_theft</td><td>CRITICAL</td><td><b>MISSED</b></td><td>Layer -</td><td>0</td></tr>
+<tr style='color:#28a745'><td>AWS credential extraction via tool args</td><td>credential_theft</td><td>CRITICAL</td><td><b>BLOCKED</b></td><td>Layer 4</td><td>95</td></tr>
+<tr style='color:#28a745'><td>GitHub token exfiltration via webhook</td><td>credential_theft</td><td>CRITICAL</td><td><b>BLOCKED</b></td><td>Layer 5</td><td>90</td></tr>
+<tr style='color:#28a745'><td>SSRF to AWS metadata endpoint</td><td>ssrf</td><td>CRITICAL</td><td><b>BLOCKED</b></td><td>Layer 5</td><td>90</td></tr>
+<tr style='color:#28a745'><td>SSRF to internal service via localhost</td><td>ssrf</td><td>HIGH</td><td><b>BLOCKED</b></td><td>Layer 5</td><td>90</td></tr>
+<tr style='color:#28a745'><td>SSRF to internal network 10.x range</td><td>ssrf</td><td>HIGH</td><td><b>BLOCKED</b></td><td>Layer 5</td><td>90</td></tr>
+<tr style='color:#28a745'><td>SSRF to link-local metadata (Azure)</td><td>ssrf</td><td>CRITICAL</td><td><b>BLOCKED</b></td><td>Layer 5</td><td>90</td></tr>
+<tr style='color:#dc3545'><td>Path traversal to /etc/passwd</td><td>path_traversal</td><td>HIGH</td><td><b>MISSED</b></td><td>Layer -</td><td>0</td></tr>
+<tr style='color:#dc3545'><td>Path traversal to SSH keys</td><td>path_traversal</td><td>CRITICAL</td><td><b>MISSED</b></td><td>Layer -</td><td>0</td></tr>
+<tr style='color:#dc3545'><td>Path traversal with URL encoding</td><td>path_traversal</td><td>HIGH</td><td><b>MISSED</b></td><td>Layer -</td><td>0</td></tr>
+<tr style='color:#28a745'><td>Python pickle deserialization RCE</td><td>deserialization</td><td>CRITICAL</td><td><b>BLOCKED</b></td><td>Layer 5</td><td>90</td></tr>
+<tr style='color:#28a745'><td>YAML deserialization exploit</td><td>deserialization</td><td>HIGH</td><td><b>BLOCKED</b></td><td>Layer 3</td><td>85</td></tr>
+<tr style='color:#dc3545'><td>Rapid-fire auth brute force</td><td>rate_limit_bypass</td><td>MEDIUM</td><td><b>MISSED</b></td><td>Layer -</td><td>0</td></tr>
+<tr style='color:#dc3545'><td>Timing attack on token validation</td><td>timing_attack</td><td>MEDIUM</td><td><b>MISSED</b></td><td>Layer -</td><td>0</td></tr>
+<tr style='color:#dc3545'><td>Command injection via filename</td><td>command_injection</td><td>CRITICAL</td><td><b>MISSED</b></td><td>Layer -</td><td>0</td></tr>
+<tr style='color:#dc3545'><td>Command injection via backticks</td><td>command_injection</td><td>CRITICAL</td><td><b>MISSED</b></td><td>Layer -</td><td>0</td></tr>
+<tr style='color:#dc3545'><td>DNS tunneling data exfiltration</td><td>dns_exfiltration</td><td>HIGH</td><td><b>MISSED</b></td><td>Layer -</td><td>0</td></tr>
+<tr style='color:#dc3545'><td>Multi-tool chain: read secrets then email</td><td>tool_chaining</td><td>CRITICAL</td><td><b>MISSED</b></td><td>Layer -</td><td>0</td></tr>
+<tr style='color:#dc3545'><td>Typosquat package installation</td><td>supply_chain</td><td>HIGH</td><td><b>MISSED</b></td><td>Layer -</td><td>0</td></tr>
+<tr style='color:#dc3545'><td>Sudo escalation via tool argument</td><td>privilege_escalation</td><td>CRITICAL</td><td><b>MISSED</b></td><td>Layer -</td><td>0</td></tr>
 </table>
 </div></body></html>
