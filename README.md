@@ -2,6 +2,25 @@
 
 [![Demo Dashboard (static)](https://img.shields.io/badge/Demo_Dashboard-Static-lightgrey)](https://poojakira.github.io/mcp-security-gateway-monitor/)
 
+> ⚠️ **HONEST STATUS: ~51% detection rate on bundled attack catalog. This is a research prototype, not production-ready. For production MCP/LLM guardrails, see [NeMo Guardrails](https://github.com/NVIDIA/NeMo-Guardrails) or [LLM Guard](https://github.com/protectai/llm-guard).**
+
+## Known Limitations
+
+- **51% detection = worse than a coin flip** for security decision-making. Attackers will always be in the undetected 49%.
+- **"Kernel monitor" is misleadingly named.** It evaluates structured `SyscallEvent` objects — it does NOT hook syscalls or use eBPF/ptrace. It's a policy evaluator.
+- **"Egress policy" doesn't block traffic.** It returns allow/deny decisions but cannot intercept network packets. It's a decision function, not a firewall.
+- **Prompt injection detection is 12 regex patterns.** Trivially bypassable with Unicode substitution, encoding tricks, or foreign language.
+- **No actual MCP protocol integration.** Evaluates Python dicts, not MCP wire-format messages.
+
+## What It Demonstrates Well
+
+- Layered defense architecture (5 independent decision layers)
+- P99 < 5ms latency per tool call (stdlib-only, no ML in core path)
+- Hash-chained audit logging for non-repudiation
+- Default-deny egress policy pattern
+
+---
+
 > **NOTE: Dashboard metrics are simulated/generated data for demonstration. Not live security telemetry.**
 
 A tool-call security monitor for MCP (Model Context Protocol) agents. It sits between an AI assistant and the tools it calls (email, file access, APIs), inspecting each call for signs of prompt injection, data exfiltration, or unauthorized behavior.
