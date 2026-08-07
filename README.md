@@ -1,6 +1,6 @@
 # MCP Security Gateway Monitor
 
-[![Live Dashboard](https://img.shields.io/badge/Live_Dashboard-View-blue)](https://poojakira.github.io/mcp-security-gateway-monitor/)
+[![Demo Dashboard (static)](https://img.shields.io/badge/Demo_Dashboard-Static-lightgrey)](https://poojakira.github.io/mcp-security-gateway-monitor/)
 
 > **NOTE: Dashboard metrics are simulated/generated data for demonstration. Not live security telemetry.**
 
