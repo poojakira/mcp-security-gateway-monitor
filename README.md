@@ -6,7 +6,7 @@
 
 ## Known Limitations
 
-- **51% detection = worse than a coin flip** for security decision-making. Attackers will always be in the undetected 49%.
+- **51% detection = not meaningful for security decisions.** Attackers will always be in the undetected 49%.
 - **"Kernel monitor" is misleadingly named.** It evaluates structured `SyscallEvent` objects — it does NOT hook syscalls or use eBPF/ptrace. It's a policy evaluator.
 - **"Egress policy" doesn't block traffic.** It returns allow/deny decisions but cannot intercept network packets. It's a decision function, not a firewall.
 - **Prompt injection detection is 12 regex patterns.** Trivially bypassable with Unicode substitution, encoding tricks, or foreign language.
@@ -30,13 +30,6 @@ It has 5 core defense layers that run on every tool call with zero external depe
 ## What problem does this solve?
 
 When AI assistants use external tools, those tool calls can be hijacked. A real-world example: an MCP server silently added a hidden BCC to outgoing emails, forwarding copies to an attacker. This project monitors and blocks that class of attack.
-
-## Honest status
-
-- **Detection rate on the full built-in attack catalog: ~51%.** The 5-layer defense catches about half of the red-team payloads in the bundled simulator. This is not a mature product - it's a working prototype with real detection logic.
-- **Line coverage: 77%** (pytest, enforced in CI).
-- **ML classifier (Layer 6) is experimental.** Its reported 98% accuracy is measured on its own synthetic training data. That number means nothing for real-world attacks. Use it as a supplementary signal behind layers 1-5.
-- **Zero runtime dependencies** for the core 5 layers (stdlib only).
 
 ---
 
